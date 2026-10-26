@@ -1,75 +1,94 @@
-# Con lắc ngược – Phòng thí nghiệm ảo
+# Inverted Pendulum – Virtual Lab
 
-Mô phỏng robot giữ thăng bằng cho cây gậy dựng ngược, dành cho học sinh **lớp 10**. Chạy ngay trên trình duyệt, không cần cài đặt, không cần phần cứng.
+A simulation of a robot that keeps a stick balanced upside down, made for **grade 10** students. It runs straight in the browser: nothing to install and no hardware needed.
 
-👉 **Mở mô phỏng:** `https://<tên-tài-khoản>.github.io/con-lac-nguoc/`
-*(thay `<tên-tài-khoản>` bằng tên GitHub của bạn sau khi bật GitHub Pages)*
+👉 **Open the simulation:** `https://<your-username>.github.io/con-lac-nguoc/`
+*(replace `<your-username>` with your GitHub username after turning on GitHub Pages)*
 
 ---
 
-## Dùng thế nào?
+## How to use it
 
-- **Trên máy tính hoặc điện thoại:** mở đường link ở trên, hoặc quét mã QR giáo viên đưa.
-- **Không có internet:** tải file `index.html` về rồi nhấp đúp để mở bằng Chrome, Edge, Firefox hoặc Safari.
+- **On a computer or phone:** open the link above, or scan the QR code your teacher shows you.
+- **Without internet:** download `index.html` and double-click it to open it in Chrome, Edge, Firefox or Safari.
 
-Mỗi học sinh có thể tự làm trên máy của mình. Phần thử thách đã hoàn thành được lưu lại trên trình duyệt của máy đó.
+Each student can work on their own device. Finished challenges are remembered in that device's browser.
 
-## Bài học gồm 3 bước
+## The lesson has 3 steps
 
-| Bước | Học sinh làm gì | Rút ra điều gì |
+| Step | What students do | What they learn |
 |---|---|---|
-| **1. Tự tay giữ** | Dùng phím ← → hoặc nút trên màn hình để tự giữ gậy đứng | Cân bằng không bền rất khó giữ. Người phản ứng không kịp nên cần máy tính |
-| **2. Dạy robot bằng PID** | Nhập 3 con số P, I, D rồi bấm **Áp dụng**, sau đó bấm **Đẩy** để thử | Mỗi con số có vai trò riêng. Robot giữ được nhờ vòng phản hồi |
-| **3. Tự đứng dậy** | Xem robot (hoặc tự mình) đẩy qua lại để đưa gậy từ dưới lên đỉnh | Đẩy đúng nhịp thì cơ năng tăng dần, giống như nhún xích đu |
+| **1. Balance it yourself** | Use the ← → keys or the on-screen buttons to keep the stick up | Unstable balance is very hard to hold. People react too slowly, so a computer is needed |
+| **2. Teach the robot with PID** | Type in three numbers P, I and D, press **Apply**, then press **Push** to test | Each number has its own job. The robot stays balanced thanks to a feedback loop |
+| **3. Swing up** | Watch the robot (or do it yourself) push back and forth to bring the stick from hanging to standing | Pushing in rhythm raises the mechanical energy step by step, like pumping a swing |
 
-### P, I, D là gì?
+### What are P, I and D?
 
-- **P – nghiêng nhiều thì đẩy mạnh.** Giống một cái lò xo kéo gậy về giữa.
-- **I – nghiêng lâu thì đẩy thêm.** Cộng dồn độ nghiêng theo thời gian. Với con lắc này, I lớn lại làm cánh tay chạy đi xa, nên thường để I = 0.
-- **D – đổ nhanh thì phanh lại.** Nhìn tốc độ đổ để chặn trước, giúp gậy không lắc qua lắc lại.
+- **P – leans a lot → push hard.** Works like a spring that pulls the stick back to the middle.
+- **I – leans for long → push more.** Adds up the lean over time. On this pendulum a big I actually makes the arm wander away, so I is usually left at 0.
+- **D – falls fast → brake.** Looks at how fast the stick is falling and stops it early, so it does not wobble back and forth.
 
-Bộ số gợi ý để bắt đầu: **P = 150, I = 0, D = 20**. Có sẵn 4 bộ số mẫu (*Bộ số tốt, Bỏ D, P nhỏ, I lớn*) để so sánh. Trước khi bấm Áp dụng, trang sẽ **đoán trước** bộ số vừa nhập có giữ được gậy hay không, nhờ đó học sinh tự kiểm chứng dự đoán của mình.
+A good starting set: **P = 150, I = 0, D = 20**. There are 4 ready-made sets to compare (*Good set, No D, Small P, Big I*). Before you press Apply, the page **predicts** whether the new numbers will hold the stick, so students can check their own guesses.
 
-### 7 thử thách
+### Is it balanced? (Lyapunov check)
 
-1. Tự tay giữ gậy đứng 3 giây.
-2. Nhập bộ số giúp robot giữ 10 giây.
-3. Đẩy gậy 3 lần mà robot vẫn giữ được.
-4. Thử D = 0 và xem gậy làm gì.
-5. Thử I = 400 rồi bấm Đẩy: cánh tay chạy xa hay gần?
-6. Xem robot tự đưa gậy lên đỉnh.
-7. Tự tay đưa gậy lên đỉnh.
+Instead of judging "it looks upright" by eye, the page uses **Lyapunov's method**. It gives the robot a score **V**, a kind of "energy of the mistake":
 
-## Gợi ý cho giáo viên
+- **V = 0** only when the stick is perfectly upright and everything is still.
+- **100%** is the score of a stick leaning 5° and standing still.
+- If V keeps going **down**, the robot is winning. Staying **below 10% for 1 second** counts as **Balanced ✓**.
+- For numbers that cannot work, **no such V exists**, and the page says so before the stick even falls.
 
-Có thể dạy trong **4 tiết**:
+The verdict can be *Balanced ✓*, *Getting back to balance*, *Pushed off balance*, *Almost balanced (small shake)*, *Stick upright, arm still drifting*, *Can't balance* or *Fell over*.
 
-1. **Vì sao khó?** Cho cả lớp dựng thước hoặc chổi trên tay, rồi làm Bước 1. Nối với bài *các dạng cân bằng* và *moment lực*.
-2. **Vòng phản hồi.** Giải thích 3 việc Nhìn → Nghĩ → Đẩy ở cuối trang. Trò chơi gợi ý: một em bịt mắt dựng chổi, một em nhìn và hô hướng, để thấy độ trễ làm hỏng việc giữ thăng bằng.
-3. **Chỉnh PID.** Học sinh làm Bước 2 theo nhóm: chỉ dùng P, thêm D, rồi thử I. Ghi lại kết quả vào phiếu và thi xem nhóm nào hoàn thành nhiều thử thách nhất.
-4. **Năng lượng.** Làm Bước 3. Nối với bài *thế năng, động năng, bảo toàn cơ năng*.
+<details>
+<summary>How V is computed (for teachers)</summary>
 
-Câu hỏi kiểm tra nhanh (không cần công thức):
-- Vì sao chỉ có P thì gậy cứ lắc mãi?
-- Vẽ lại vòng phản hồi gồm 3 bước.
-- Vì sao robot phải đẩy qua lại nhiều lần mới đưa được gậy lên đỉnh?
+Around the upright position the closed loop is linear: **ẋ = A·x** with x = [φ, φ', θ, θ'] (stick angle, its rate, arm angle, its rate). The page solves the Lyapunov equation **Aᵀ·X + X·A = −I** for the current P, I, D and uses **V(x) = xᵀ·X·x**. By Lyapunov's theorem for linear systems, a positive-definite X exists exactly when the loop is stable, and then V decreases along every motion.
 
-## Mô phỏng này dựa trên gì?
+With I > 0 the quantity h = φ' + c·θ' + b·φ − a·∫φ never changes, so ∫φ is folded into the other states and the arm settles at a new spot θ* = I·h / (a·k3). V is measured from that spot, which is why the page can say "stick upright, arm still drifting". The 10% threshold leaves room for the encoder's 0.36° steps, which make very large P or D shake slightly.
+</details>
 
-Mô phỏng dựa theo dự án **[Arduino UNO Q Inverted Pendulum (PID UI)](https://projecthub.arduino.cc/Arduino_Genuino/arduino-uno-q-inverted-pendulum-pid-ui-e8833f)**. Mô hình thật gồm động cơ bước NEMA 17 quay cánh tay ngang và encoder 1000 vạch đo góc của gậy. Kiểu con lắc này gọi là **con lắc Furuta** (con lắc ngược quay).
+### 7 challenges
 
-Trong mô phỏng:
-- Gậy được coi là thanh đồng chất dài 30 cm, cánh tay dài 15 cm. Đây là kích thước ước lượng, vì dự án gốc không công bố.
-- Robot đo góc và tính lực đẩy **500 lần mỗi giây**. Encoder chỉ phân biệt được những thay đổi từ 0.36° trở lên, đúng như cảm biến thật.
-- Motor có giới hạn sức đẩy, nên P quá lớn thì robot cũng không đẩy mạnh hơn được nữa.
-- Bộ điều khiển dùng cho học sinh là PID đơn giản, kèm một "trợ lý" nhỏ giữ cánh tay không trôi xa. Cách này dễ hiểu hơn PID trong firmware gốc của Arduino.
-- Ở Bước 3, robot bơm năng lượng theo nhịp dao động. Khi gậy lên gần đỉnh, robot chuyển sang một bộ giữ thăng bằng có sẵn.
+1. Keep the stick up yourself for 3 seconds.
+2. Find numbers that let the robot balance for 10 seconds.
+3. Push the stick 3 times and the robot still holds it.
+4. Try D = 0 and see what the stick does.
+5. Try I = 400, then press Push: does the arm wander far or stay close?
+6. Watch the robot swing the stick up to the top.
+7. Swing the stick up to the top yourself.
 
-## Cấu trúc thư mục
+## Notes for teachers
+
+The lesson fits into **4 periods**:
+
+1. **Why is it hard?** Have the class balance a ruler or a broom on their hands, then do Step 1. Links to *types of equilibrium* and *moment of a force*.
+2. **The feedback loop.** Go through Look → Think → Push at the bottom of the page. Game idea: one student balances a broom blindfolded while a partner calls out directions, to show how delay ruins balance.
+3. **Tuning PID.** Students do Step 2 in groups: P only, then add D, then try I. They record results on a worksheet, and groups compete to finish the most challenges.
+4. **Energy.** Do Step 3. Links to *potential energy, kinetic energy and conservation of mechanical energy*.
+
+Quick check questions (no formulas needed):
+- Why does the stick keep wobbling when only P is used?
+- Draw the 3-step feedback loop.
+- Why does the robot need to push back and forth many times to bring the stick to the top?
+
+## What is the simulation based on?
+
+It is based on the **[Arduino UNO Q Inverted Pendulum (PID UI)](https://projecthub.arduino.cc/Arduino_Genuino/arduino-uno-q-inverted-pendulum-pid-ui-e8833f)** project. The real build uses a NEMA 17 stepper motor to turn a horizontal arm and a 1000-step encoder to measure the stick's angle. This kind of pendulum is called a **Furuta pendulum** (rotary inverted pendulum).
+
+In the simulation:
+- The stick is a uniform rod 30 cm long on an arm 15 cm long. These sizes are estimates, because the original project does not publish them.
+- The robot measures the angle and works out its push **500 times per second**. Like the real sensor, the encoder only notices changes of 0.36° or more.
+- The motor has a strength limit, so making P bigger and bigger does not make the robot push harder forever.
+- The controller students use is a simple PID plus a small "helper" that stops the arm from drifting away. It is easier to understand than the PID in the original Arduino firmware.
+- In Step 3 the robot pumps energy in time with the swing. When the stick gets near the top, the robot switches to a built-in balancing controller.
+
+## Files
 
 ```
-index.html   ← toàn bộ mô phỏng (HTML + CSS + JavaScript trong 1 file)
-README.md    ← file này
+index.html   ← the whole simulation (HTML + CSS + JavaScript in one file)
+README.md    ← this file
 ```
 
-Muốn sửa nội dung, chỉ cần mở `index.html` bằng một trình soạn thảo bất kỳ, sửa rồi tải lên lại.
+To change anything, open `index.html` in any text editor, edit it, and upload it again.
