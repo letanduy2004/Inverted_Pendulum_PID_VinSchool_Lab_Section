@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Con lắc ngược</title>
+<title>Inverted Pendulum Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
@@ -99,7 +99,7 @@ button { font: inherit; }
 .key { font-size: 13px; padding: 1px 7px; border-radius: 6px; border: 1px solid var(--line); background: var(--tint); color: var(--ink); }
 
 #pidForm { display: grid; gap: 12px; }
-.pid-boxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.pid-boxes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-items: start; }
 .pid-box { display: grid; gap: 4px; min-width: 0; }
 .pid-box label { font-family: var(--font-head); font-size: 22px; font-weight: 700; text-align: center; }
 .pid-box label.p { color: var(--green); } .pid-box label.i { color: var(--yellow); } .pid-box label.d { color: var(--purple); }
@@ -150,133 +150,133 @@ button { font: inherit; }
 <body>
 <div class="wrap">
   <header>
-    <h1>Con lắc ngược</h1>
-    <p class="intro">Giúp robot giữ cây gậy đứng thẳng trên đầu cánh tay, giống như em dựng cây chổi trên lòng bàn tay.</p>
+    <h1>Inverted Pendulum</h1>
+    <p class="intro">Help a robot keep a stick standing upright on the end of its arm, just like balancing a broom on your hand.</p>
   </header>
 
-  <nav class="tabs" role="tablist" aria-label="Các bước">
-    <button class="tab" role="tab" data-mode="manual" aria-selected="false"><span class="num">1</span>Tự tay giữ</button>
-    <button class="tab" role="tab" data-mode="pd" aria-selected="true"><span class="num">2</span>Dạy robot bằng PID</button>
-    <button class="tab" role="tab" data-mode="swing" aria-selected="false"><span class="num">3</span>Tự đứng dậy</button>
+  <nav class="tabs" role="tablist" aria-label="Steps">
+    <button class="tab" role="tab" data-mode="manual" aria-selected="false"><span class="num">1</span>Balance it yourself</button>
+    <button class="tab" role="tab" data-mode="pd" aria-selected="true"><span class="num">2</span>Teach the robot with PID</button>
+    <button class="tab" role="tab" data-mode="swing" aria-selected="false"><span class="num">3</span>Swing up</button>
   </nav>
 
   <div class="main">
     <div class="card stage">
       <div class="stage-top">
-        <span class="status good" id="status">Đang đứng</span>
-        <span class="big-time" id="timeBox">Giữ được <b id="timeVal">0.0</b> giây</span>
+        <span class="status good" id="status">Standing</span>
+        <span class="big-time" id="timeBox">Balanced for <b id="timeVal">0.0</b> s</span>
       </div>
-      <canvas id="rig" aria-label="Hình con lắc ngược"></canvas>
+      <canvas id="rig" aria-label="Inverted pendulum picture"></canvas>
       <div class="stage-bottom">
-        <button type="button" class="btn small" id="slowBtn" aria-pressed="false">Chạy chậm</button>
-        <button type="button" class="btn small" id="pauseBtn" aria-pressed="false">Tạm dừng</button>
-        <button type="button" class="btn small" id="camBtn">Góc nhìn: cố định</button>
-        <span class="tilt-text" id="tiltText">Nghiêng 0°</span>
+        <button type="button" class="btn small" id="slowBtn" aria-pressed="false">Slow motion</button>
+        <button type="button" class="btn small" id="pauseBtn" aria-pressed="false">Pause</button>
+        <button type="button" class="btn small" id="camBtn">View: fixed</button>
+        <span class="tilt-text" id="tiltText">Leaning 0°</span>
       </div>
     </div>
 
     <div class="card">
       <!-- 1 -->
       <section id="panel-manual" hidden>
-        <h2>Em thử làm robot nhé</h2>
-        <p class="say">Gậy nghiêng bên nào thì đẩy cánh tay về bên đó để đỡ. Giữ phím <span class="key">←</span> <span class="key">→</span> hoặc bấm giữ nút dưới đây.</p>
+        <h2>You be the robot</h2>
+        <p class="say">Whichever way the stick leans, push the arm that way to catch it. Hold the <span class="key">←</span> <span class="key">→</span> keys or press and hold the buttons below.</p>
         <div class="hold-row">
-          <button type="button" class="btn hold" id="mLeft">◀ Trái</button>
-          <button type="button" class="btn hold" id="mRight">Phải ▶</button>
+          <button type="button" class="btn hold" id="mLeft">◀ Left</button>
+          <button type="button" class="btn hold" id="mRight">Right ▶</button>
         </div>
         <div class="row">
-          <button type="button" class="btn main-btn" id="mReset">Dựng lại</button>
-          <span class="say">Kỷ lục: <span class="score" id="mBest">0.0</span> giây</span>
+          <button type="button" class="btn main-btn" id="mReset">Stand it up again</button>
+          <span class="say">Best: <span class="score" id="mBest">0.0</span> s</span>
         </div>
-        <p class="hint warn">Khó quá? Bấm <b>Chạy chậm</b>. Ngoài đời gậy đổ chỉ trong chưa tới nửa giây, nên người ta để máy tính làm việc này.</p>
+        <p class="hint warn">Too hard? Press <b>Slow motion</b>. In real life the stick falls in less than half a second, which is why we let a computer do this job.</p>
       </section>
 
       <!-- 2 -->
       <section id="panel-pd">
-        <h2>Nhập 3 con số cho robot</h2>
+        <h2>Give the robot 3 numbers</h2>
         <form id="pidForm" novalidate>
           <div class="pid-boxes">
             <div class="pid-box">
               <label class="p" for="inP">P</label>
               <input id="inP" type="number" inputmode="decimal" min="0" max="1000" step="any" value="150">
-              <small>nghiêng nhiều thì đẩy mạnh</small>
+              <small>leans a lot → push hard</small>
             </div>
             <div class="pid-box">
               <label class="i" for="inI">I</label>
               <input id="inI" type="number" inputmode="decimal" min="0" max="1500" step="any" value="0">
-              <small>nghiêng lâu thì đẩy thêm</small>
+              <small>leans for long → push more</small>
             </div>
             <div class="pid-box">
               <label class="d" for="inD">D</label>
               <input id="inD" type="number" inputmode="decimal" min="0" max="200" step="any" value="20">
-              <small>đổ nhanh thì phanh lại</small>
+              <small>falls fast → brake</small>
             </div>
           </div>
           <div class="row">
-            <button type="submit" class="btn main-btn" id="pidApply">Áp dụng</button>
-            <span class="using" id="using">Robot đang dùng: P 150 · I 0 · D 20</span>
+            <button type="submit" class="btn main-btn" id="pidApply">Apply</button>
+            <span class="using" id="using">Robot is using: P 150 · I 0 · D 20</span>
           </div>
           <p class="err" id="pidErr" hidden></p>
         </form>
-        <div class="presets" aria-label="Bộ số để thử">
-          <button type="button" class="preset" data-p="150" data-i="0" data-d="20">Bộ số tốt</button>
-          <button type="button" class="preset" data-p="150" data-i="0" data-d="0">Bỏ D</button>
-          <button type="button" class="preset" data-p="60" data-i="0" data-d="20">P nhỏ</button>
-          <button type="button" class="preset" data-p="150" data-i="400" data-d="20">I lớn</button>
+        <div class="presets" aria-label="Numbers to try">
+          <button type="button" class="preset" data-p="150" data-i="0" data-d="20">Good set</button>
+          <button type="button" class="preset" data-p="150" data-i="0" data-d="0">No D</button>
+          <button type="button" class="preset" data-p="60" data-i="0" data-d="20">Small P</button>
+          <button type="button" class="preset" data-p="150" data-i="400" data-d="20">Big I</button>
         </div>
         <p class="hint" id="hint"></p>
         <div class="row">
-          <button type="button" class="btn main-btn" id="pdReset">Dựng lên</button>
-          <button type="button" class="btn" id="pushL">← Đẩy</button>
-          <button type="button" class="btn" id="pushR">Đẩy →</button>
+          <button type="button" class="btn main-btn" id="pdReset">Stand it up</button>
+          <button type="button" class="btn" id="pushL">← Push</button>
+          <button type="button" class="btn" id="pushR">Push →</button>
         </div>
       </section>
 
       <!-- 3 -->
       <section id="panel-swing" hidden>
-        <h2>Từ dưới đứng lên</h2>
-        <p class="say">Motor không đủ khỏe để nhấc gậy lên một lần. Robot đẩy qua lại đúng nhịp cho gậy lắc cao dần, giống như nhún xích đu.</p>
+        <h2>From hanging to standing</h2>
+        <p class="say">The motor is not strong enough to lift the stick in one go. The robot pushes back and forth in rhythm so the stick swings higher and higher, like pumping a swing.</p>
         <div class="energy">
-          <div class="energy-label"><span>Năng lượng (thế năng + động năng)</span><b id="ePct">0%</b></div>
+          <div class="energy-label"><span>Energy (potential + kinetic)</span><b id="ePct">0%</b></div>
           <div class="energy-track"><div class="energy-fill" id="eFill"></div><div class="energy-mark"></div></div>
-          <div class="energy-label"><span></span><span>vạch đen: đủ để lên đỉnh</span></div>
+          <div class="energy-label"><span></span><span>black line: enough to reach the top</span></div>
         </div>
         <div class="row">
-          <button type="button" class="btn main-btn" id="swAuto" aria-pressed="false">Robot tự làm</button>
-          <button type="button" class="btn" id="swReset">Thả về đáy</button>
+          <button type="button" class="btn main-btn" id="swAuto" aria-pressed="false">Let the robot do it</button>
+          <button type="button" class="btn" id="swReset">Drop to the bottom</button>
         </div>
-        <p class="say">Em tự làm: khi quả nặng đi qua chỗ thấp nhất, đẩy cánh tay <b>ngược chiều</b> với quả nặng.</p>
+        <p class="say">Do it yourself: as the weight passes the lowest point, push the arm in the <b>opposite</b> direction to the weight.</p>
         <div class="hold-row">
-          <button type="button" class="btn hold" id="sLeft">◀ Trái</button>
-          <button type="button" class="btn hold" id="sRight">Phải ▶</button>
+          <button type="button" class="btn hold" id="sLeft">◀ Left</button>
+          <button type="button" class="btn hold" id="sRight">Right ▶</button>
         </div>
-        <label class="check"><input type="checkbox" id="autoCatch" checked> Lên gần đỉnh thì robot tự giữ</label>
+        <label class="check"><input type="checkbox" id="autoCatch" checked> Robot catches it near the top</label>
       </section>
     </div>
   </div>
 
   <div class="below">
     <div class="card">
-      <h2>Đang xảy ra gì?</h2>
+      <h2>What is happening?</h2>
       <p id="explain">…</p>
-      <canvas id="trace" aria-label="Đồ thị độ nghiêng"></canvas>
-      <p class="say" style="font-size:14px">Đường cam: gậy nghiêng bao nhiêu trong 10 giây vừa qua. Vượt đường đỏ là đổ.</p>
+      <canvas id="trace" aria-label="Lean angle chart"></canvas>
+      <p class="say" style="font-size:14px">Orange line: how far the stick leaned over the last 10 seconds. Past the red line means it fell.</p>
     </div>
     <div class="card">
-      <h2>Thử thách <span class="score" id="goalCount"></span></h2>
+      <h2>Challenges <span class="score" id="goalCount"></span></h2>
       <ul class="goals" id="goals"></ul>
-      <button type="button" class="btn small" id="goalsReset">Làm lại thử thách</button>
+      <button type="button" class="btn small" id="goalsReset">Reset challenges</button>
     </div>
   </div>
 
   <div class="card">
-    <h2>Robot giữ thăng bằng như thế nào?</h2>
+    <h2>How does the robot keep its balance?</h2>
     <div class="how">
-      <div><b>1. Nhìn</b><span>Cảm biến đo xem gậy đang nghiêng bao nhiêu.</span></div>
-      <div><b>2. Nghĩ</b><span>Máy tính nhỏ dùng P, I, D để tính cần đẩy mạnh bao nhiêu.</span></div>
-      <div><b>3. Đẩy</b><span>Motor quay cánh tay để đỡ gậy. Rồi lại nhìn tiếp…</span></div>
+      <div><b>1. Look</b><span>A sensor measures how far the stick is leaning.</span></div>
+      <div><b>2. Think</b><span>A tiny computer uses P, I and D to work out how hard to push.</span></div>
+      <div><b>3. Push</b><span>The motor turns the arm to catch the stick. Then it looks again…</span></div>
     </div>
-    <p class="say">Robot lặp lại 3 việc này 500 lần mỗi giây. Đó gọi là <b>vòng phản hồi</b>.</p>
+    <p class="say">The robot repeats these 3 steps 500 times every second. This is called a <b>feedback loop</b>.</p>
   </div>
 </div>
 
@@ -338,7 +338,7 @@ button { font: inherit; }
       S.u = K_BAL[0] * phi + K_BAL[1] * rate + K_BAL[2] * (S.th - S.thRef) + K_BAL[3] * S.thd;
       if (Math.abs(phi) > 20 * DEG) {
         S.swState = S.autoSwing ? "pump" : "idle"; S.pumpRef = S.th; S.manualPump = false;
-        note("Gậy rơi xuống rồi.");
+        note("The stick fell down.");
       }
       return;
     }
@@ -347,7 +347,7 @@ button { font: inherit; }
       S.swState = "balance"; S.thRef = S.th; S.u = 0;
       if (!S.autoSwing && S.manualPump) completeGoal("swingManual");
       if (S.autoSwing) completeGoal("swingAuto");
-      note("Lên đỉnh rồi!");
+      note("It made it to the top!");
       return;
     }
     if (S.keyDir !== 0) { S.u = S.keyDir * 30; S.manualPump = true; return; }
@@ -433,19 +433,19 @@ button { font: inherit; }
   function hintFor(P, I, D) {
     const [k3, k4] = ASSIST;
     if (stable(P, I, D)) {
-      if (!stable(P, I, D, 0.15)) return { cls: "warn", msg: "Giữ được, nhưng còn yếu: bị đẩy là dễ đổ." + (I > 0 ? " Thử giảm I." : " Thử tăng P một chút.") };
-      let msg = "Bộ số này <b>giữ được</b> gậy.";
-      if (I > 0) msg += " Nhưng I làm cánh tay chạy đi xa hơn.";
-      if (P > 300) msg += " P rất lớn nên robot đẩy rất mạnh, hơi giật.";
+      if (!stable(P, I, D, 0.15)) return { cls: "warn", msg: "It holds, but only just: a push will easily knock it over." + (I > 0 ? " Try a smaller I." : " Try a slightly bigger P.") };
+      let msg = "These numbers <b>can hold</b> the stick.";
+      if (I > 0) msg += " But I makes the arm wander further away.";
+      if (P > 300) msg += " P is very big, so the robot pushes very hard and a bit jerky.";
       return { cls: "good", msg };
     }
     if (C * P <= A + k3) {
       const lo = pMin(I, D);
-      return { cls: "bad", msg: "<b>P nhỏ quá:</b> robot đẩy yếu hơn sức nặng của gậy nên gậy đổ từ từ." + (lo !== null ? ` Thử P từ ${lo} trở lên.` : "") };
+      return { cls: "bad", msg: "<b>P is too small:</b> the robot pushes less than the stick's weight pulls, so it slowly falls over." + (lo !== null ? ` Try P of ${lo} or more.` : "") };
     }
-    if (C * D <= k4) return { cls: "bad", msg: "<b>Thiếu D:</b> gậy sẽ lắc qua lắc lại, mỗi lúc một mạnh, rồi đổ." };
-    if (I > 0 && stable(P, 0, D)) return { cls: "bad", msg: "<b>I lớn quá:</b> robot đẩy quá tay nên gậy lắc mạnh dần rồi đổ. Thử I = 0." };
-    return { cls: "bad", msg: "<b>D yếu so với P:</b> robot đẩy mạnh mà phanh không kịp. Thử tăng D." };
+    if (C * D <= k4) return { cls: "bad", msg: "<b>Not enough D:</b> the stick will wobble back and forth, bigger each time, then fall." };
+    if (I > 0 && stable(P, 0, D)) return { cls: "bad", msg: "<b>I is too big:</b> the robot overdoes it, so the stick wobbles more and more and falls. Try I = 0." };
+    return { cls: "bad", msg: "<b>D is too weak for this P:</b> the robot pushes hard but cannot brake in time. Try a bigger D." };
   }
 
   // ------------------------------------------------------------ PID entry
@@ -457,7 +457,7 @@ button { font: inherit; }
       const good = raw !== "" && Number.isFinite(v) && v >= lo && v <= hi;
       el.classList.toggle("invalid", !good);
       el.classList.toggle("changed", good && v !== S[k]);
-      if (!good) { out.ok = false; out.bad.push(`${k} phải là số từ ${lo} đến ${hi}`); }
+      if (!good) { out.ok = false; out.bad.push(`${k} must be a number from ${lo} to ${hi}`); }
       out[k] = v;
     }
     return out;
@@ -466,21 +466,21 @@ button { font: inherit; }
     const v = readInputs();
     const pending = v.ok && (v.P !== S.P || v.I !== S.I || v.D !== S.D);
     const u = $("using");
-    u.textContent = `Robot đang dùng: P ${S.P} · I ${S.I} · D ${S.D}` + (pending ? "  (số mới chưa áp dụng)" : "");
+    u.textContent = `Robot is using: P ${S.P} · I ${S.I} · D ${S.D}` + (pending ? "  (new numbers not applied yet)" : "");
     u.classList.toggle("pending", pending);
     $("pidErr").hidden = v.ok;
     if (!v.ok) $("pidErr").textContent = v.bad.join(". ") + ".";
     const use = v.ok ? v : S;
     const h = hintFor(use.P, use.I, use.D);
     $("hint").className = "hint " + h.cls;
-    $("hint").innerHTML = (pending ? "<b>Đoán trước:</b> " : "") + h.msg;
+    $("hint").innerHTML = (pending ? "<b>Prediction:</b> " : "") + h.msg;
   }
   $("pidForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const v = readInputs();
     if (!v.ok) { refreshPid(); return; }
     S.P = v.P; S.I = v.I; S.D = v.D; S.iSum = 0;
-    note(`Đã áp dụng P ${S.P}, I ${S.I}, D ${S.D}.`);
+    note(`Applied P ${S.P}, I ${S.I}, D ${S.D}.`);
     if (S.fallen) standUp(Math.random() < 0.5 ? -3 : 3);
     refreshPid();
   });
@@ -492,13 +492,13 @@ button { font: inherit; }
 
   // ------------------------------------------------------------ challenges
   const GOALS = [
-    { id: "manual3", text: "Bước 1: tự tay giữ gậy đứng 3 giây." },
-    { id: "pd10", text: "Bước 2: nhập bộ số giúp robot giữ 10 giây." },
-    { id: "push3", text: "Bước 2: đẩy gậy 3 lần mà robot vẫn giữ được." },
-    { id: "noD", text: "Bước 2: thử D = 0. Gậy làm gì?" },
-    { id: "bigI", text: "Bước 2: thử I = 400 rồi bấm Đẩy. Cánh tay chạy xa hay gần?" },
-    { id: "swingAuto", text: "Bước 3: xem robot tự đưa gậy lên đỉnh." },
-    { id: "swingManual", text: "Bước 3: tự tay đưa gậy lên đỉnh." },
+    { id: "manual3", text: "Step 1: keep the stick up yourself for 3 seconds." },
+    { id: "pd10", text: "Step 2: find numbers that let the robot balance for 10 seconds." },
+    { id: "push3", text: "Step 2: push the stick 3 times and the robot still holds it." },
+    { id: "noD", text: "Step 2: try D = 0. What does the stick do?" },
+    { id: "bigI", text: "Step 2: try I = 400, then press Push. Does the arm wander far or stay close?" },
+    { id: "swingAuto", text: "Step 3: watch the robot swing the stick up to the top." },
+    { id: "swingManual", text: "Step 3: swing the stick up to the top yourself." },
   ];
   let done = {};
   try { done = JSON.parse(localStorage.getItem("conlac.goals") || "{}") || {}; } catch (e) { done = {}; }
@@ -609,8 +609,8 @@ button { font: inherit; }
     hline(0, col.soft, 1);
     hline(-20, col.red, 1.5, [6, 5]); hline(20, col.red, 1.5, [6, 5]);
     ctx.textBaseline = "top";
-    ctx.textAlign = "left"; ctx.fillText("10 giây trước", pl, H - pb + 4 * dpr);
-    ctx.textAlign = "right"; ctx.fillText("bây giờ", W - pr, H - pb + 4 * dpr);
+    ctx.textAlign = "left"; ctx.fillText("10 s ago", pl, H - pb + 4 * dpr);
+    ctx.textAlign = "right"; ctx.fillText("now", W - pr, H - pb + 4 * dpr);
     ctx.save(); ctx.beginPath(); ctx.rect(pl, pt, W - pl - pr, H - pt - pb); ctx.clip();
     ctx.strokeStyle = col.orange; ctx.lineWidth = 2.5 * dpr; ctx.beginPath();
     let prev = null;
@@ -627,24 +627,24 @@ button { font: inherit; }
   function dir(v) {
     const psi = camPsi();
     const across = Math.cos(S.th - psi);      // how much the tangent points screen-right
-    if (Math.abs(across) > 0.4) return v * across > 0 ? "sang phải" : "sang trái";
-    return v * Math.sin(psi - S.th) > 0 ? "về phía em" : "ra xa";
+    if (Math.abs(across) > 0.4) return v * across > 0 ? "to the right" : "to the left";
+    return v * Math.sin(psi - S.th) > 0 ? "toward you" : "away from you";
   }
-  const SWING_STATUS = { idle: ["wait", "Đang ở dưới"], pump: ["wait", "Đang lấy đà"], balance: ["good", "Đứng trên đỉnh"] };
+  const SWING_STATUS = { idle: ["wait", "Hanging down"], pump: ["wait", "Building up swing"], balance: ["good", "Standing on top"] };
   function updateText() {
     const deg = wrap(S.ph) / DEG;
     $("tiltText").textContent = S.mode === "swing" && Math.abs(deg) > 90
-      ? "Gậy đang ở phía dưới"
-      : `Nghiêng ${Math.round(Math.abs(deg))}°` + (Math.abs(deg) >= 0.5 ? ` ${dir(deg)}` : "");
-    $("tiltText").textContent += ` · Cánh tay ở ${Math.round(((S.th / DEG) % 360 + 360) % 360)}°`;
+      ? "The stick is below the arm"
+      : `Leaning ${Math.round(Math.abs(deg))}°` + (Math.abs(deg) >= 0.5 ? ` ${dir(deg)}` : "");
+    $("tiltText").textContent += ` · Arm at ${Math.round(((S.th / DEG) % 360 + 360) % 360)}°`;
 
-    let cls = "good", txt = "Đang đứng";
+    let cls = "good", txt = "Standing";
     if (S.mode === "swing") {
       [cls, txt] = SWING_STATUS[S.swState];
-      if (S.keyDir && S.swState !== "balance") txt = "Em đang đẩy";
+      if (S.keyDir && S.swState !== "balance") txt = "You are pushing";
       $("timeBox").hidden = true;
     } else {
-      if (S.fallen) { cls = "bad"; txt = "Đổ rồi"; }
+      if (S.fallen) { cls = "bad"; txt = "It fell"; }
       $("timeBox").hidden = false;
       $("timeVal").textContent = S.held.toFixed(1);
     }
@@ -653,14 +653,14 @@ button { font: inherit; }
     let ex;
     if (S.mode === "manual") {
       ex = S.fallen
-        ? `Đổ sau ${S.held.toFixed(1)} giây. Khó đúng không? Bấm <b>Dựng lại</b> và thử <b>Chạy chậm</b>.`
-        : `Gậy đang nghiêng <b>${dir(deg)}</b>. Đẩy cánh tay ${dir(deg)} để đỡ nó.`;
+        ? `It fell after ${S.held.toFixed(1)} s. Hard, isn't it? Press <b>Stand it up again</b> and try <b>Slow motion</b>.`
+        : `The stick is leaning <b>${dir(deg)}</b>. Push the arm ${dir(deg)} to catch it.`;
     } else if (S.mode === "pd") {
-      if (S.fallen) ex = `Đổ sau ${S.held.toFixed(1)} giây. ${hintFor(S.P, S.I, S.D).msg} Đổi số rồi bấm <b>Áp dụng</b>.`;
-      else if (Math.abs(deg) < 0.6 && Math.abs(S.rateEst) < 0.3) ex = "Gậy đang đứng yên. Bấm <b>Đẩy</b> để thử robot.";
+      if (S.fallen) ex = `It fell after ${S.held.toFixed(1)} s. ${hintFor(S.P, S.I, S.D).msg} Change the numbers and press <b>Apply</b>.`;
+      else if (Math.abs(deg) < 0.6 && Math.abs(S.rateEst) < 0.3) ex = "The stick is standing still. Press <b>Push</b> to test the robot.";
       else {
         const worse = S.phiEst * S.rateEst > 0;
-        ex = `Gậy nghiêng <b>${dir(deg)}</b> và đang ${worse ? "đổ thêm" : "quay về giữa"}. Robot đẩy cánh tay <b>${dir(S.u || 1)}</b> để đỡ.`;
+        ex = `The stick leans <b>${dir(deg)}</b> and is ${worse ? "falling further" : "coming back to the middle"}. The robot pushes the arm <b>${dir(S.u || 1)}</b> to catch it.`;
       }
     } else {
       // energy as a share of what is needed to reach the top (mass cancels out)
@@ -668,9 +668,9 @@ button { font: inherit; }
       const pct = Math.round(((1 + Math.cos(S.ph)) * 9.81 * lc + 0.5 * J * S.phd * S.phd) / (2 * 9.81 * lc) * 100);
       $("ePct").textContent = pct + "%";
       $("eFill").style.width = clamp(pct / 120, 0, 1) * 100 + "%";
-      if (S.swState === "balance") ex = "Lên đỉnh rồi! Robot chuyển sang giữ thăng bằng giống Bước 2.";
-      else if (S.swState === "pump" || S.keyDir) ex = `Năng lượng đang là <b>${pct}%</b>. Mỗi lần đẩy đúng nhịp, gậy lắc cao hơn một chút. Tới 100% là lên được đỉnh.`;
-      else ex = "Gậy đang thõng xuống. Bấm <b>Robot tự làm</b>, hoặc tự đẩy trái phải đúng nhịp.";
+      if (S.swState === "balance") ex = "It made it to the top! Now the robot switches to balancing, just like in Step 2.";
+      else if (S.swState === "pump" || S.keyDir) ex = `Energy is at <b>${pct}%</b>. Every push in rhythm makes the stick swing a little higher. At 100% it can reach the top.`;
+      else ex = "The stick is hanging down. Press <b>Let the robot do it</b>, or push left and right in rhythm yourself.";
     }
     if (noteText && S.t - noteT < 2) ex = `<b>${noteText}</b> ` + ex;
     $("explain").innerHTML = ex;
@@ -690,7 +690,7 @@ button { font: inherit; }
   }
   function setFollow(on) {
     S.follow = on;
-    $("camBtn").textContent = on ? "Góc nhìn: theo cánh tay" : "Góc nhìn: cố định";
+    $("camBtn").textContent = on ? "View: follow the arm" : "View: fixed";
   }
   $("camBtn").addEventListener("click", () => setFollow(!S.follow));
   for (const b of document.querySelectorAll(".tab")) b.addEventListener("click", () => setMode(b.dataset.mode));
@@ -701,7 +701,7 @@ button { font: inherit; }
   $("pauseBtn").addEventListener("click", () => {
     S.paused = !S.paused;
     $("pauseBtn").setAttribute("aria-pressed", String(S.paused));
-    $("pauseBtn").textContent = S.paused ? "Chạy tiếp" : "Tạm dừng";
+    $("pauseBtn").textContent = S.paused ? "Resume" : "Pause";
   });
   function holdButton(el, dir) {
     const on = (e) => { e.preventDefault(); S.keyDir = dir; el.classList.add("on"); try { el.setPointerCapture(e.pointerId); } catch (_) {} };
@@ -729,7 +729,7 @@ button { font: inherit; }
   $("swAuto").addEventListener("click", () => {
     S.autoSwing = !S.autoSwing;
     $("swAuto").setAttribute("aria-pressed", String(S.autoSwing));
-    $("swAuto").textContent = S.autoSwing ? "Robot đang làm…" : "Robot tự làm";
+    $("swAuto").textContent = S.autoSwing ? "Robot is working…" : "Let the robot do it";
     if (S.autoSwing && S.swState !== "balance") { S.swState = "pump"; S.pumpRef = S.th; }
     if (!S.autoSwing && S.swState === "pump") S.swState = "idle";
   });
