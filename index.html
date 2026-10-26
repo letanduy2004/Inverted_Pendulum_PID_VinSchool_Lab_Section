@@ -170,6 +170,7 @@ button { font: inherit; }
       <div class="stage-bottom">
         <button type="button" class="btn small" id="slowBtn" aria-pressed="false">Chạy chậm</button>
         <button type="button" class="btn small" id="pauseBtn" aria-pressed="false">Tạm dừng</button>
+        <button type="button" class="btn small" id="camBtn">Góc nhìn: cố định</button>
         <span class="tilt-text" id="tiltText">Nghiêng 0°</span>
       </div>
     </div>
@@ -300,8 +301,10 @@ button { font: inherit; }
     P: 150, I: 0, D: 20, iSum: 0, thRef: 0,
     swState: "idle", autoSwing: false, autoCatch: true, pumpRef: 0, manualPump: false,
     held: 0, best: 0, pushes: 0, lastPushT: -10,
-    speed: 1, paused: false, trace: [], nextTrace: 0,
+    speed: 1, paused: false, trace: [], nextTrace: 0, follow: false,
   };
+  const FIXED_VIEW = 0.65;   // camera azimuth (rad) when the view stays still
+  const camPsi = () => (S.follow ? S.th + 0.42 : FIXED_VIEW);
 
   function resetEstimator() { S.meas = []; S.hist = []; S.lastRaw = null; S.rateEst = 0; S.nextCtrl = S.t; }
   function sense() {
@@ -536,8 +539,9 @@ button { font: inherit; }
     const [W, H, dpr] = fit(rig), ctx = rctx;
     ctx.clearRect(0, 0, W, H);
     const sc = Math.min(W, H * 1.25), cx = W * 0.5, cy = H * 0.8;
-    // camera turns with the arm, so the stick always tips left/right on screen
-    const psi = S.th + 0.42, el = 0.3;
+    // fixed view: the disc stays still and the arm turns, like the real rig;
+    // follow view: the camera turns with the arm so the stick always tips left/right
+    const psi = camPsi(), el = 0.3;
     const R = [-Math.sin(psi), Math.cos(psi)];
     const U = [-Math.cos(psi) * Math.sin(el), -Math.sin(psi) * Math.sin(el), Math.cos(el)];
     const P = (x, y, z) => [cx + sc * (x * R[0] + y * R[1]), cy - sc * (x * U[0] + y * U[1] + z * U[2])];
@@ -548,13 +552,31 @@ button { font: inherit; }
       ctx.fillStyle = fill; ctx.fill(); if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1.5 * dpr; ctx.stroke(); }
     };
     disc(0.25, 0, col.tint, col.line);
-    for (let k = 0; k < 12; k++) { const a = k / 12 * 2 * Math.PI; seg(P(0.21 * Math.cos(a), 0.21 * Math.sin(a), 0), P(0.25 * Math.cos(a), 0.25 * Math.sin(a), 0), col.soft, 1.5); }
+    // angle disc: a tick every 15°, longer every 90°, numbers at 0/90/180/270
+    for (let k = 0; k < 24; k++) {
+      const a = k / 24 * 2 * Math.PI, r0 = k % 6 === 0 ? 0.195 : 0.225;
+      seg(P(r0 * Math.cos(a), r0 * Math.sin(a), 0), P(0.25 * Math.cos(a), 0.25 * Math.sin(a), 0), col.soft, k % 6 === 0 ? 2 : 1.2);
+    }
+    ctx.font = `600 ${12 * dpr}px ${getComputedStyle(document.body).fontFamily}`;
+    ctx.fillStyle = col.soft; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (const d of [0, 90, 180, 270]) { const a = d * DEG; ctx.fillText(d + "°", ...P(0.285 * Math.cos(a), 0.285 * Math.sin(a), 0)); }
     seg(P(0, 0, 0), P(0, 0, TOWER_H), col.soft, 12);
     const tip = [ARM_R * Math.cos(S.th), ARM_R * Math.sin(S.th), TOWER_H];
     seg(P(0, 0, TOWER_H), P(...tip), col.blue, 10);
     const t = [-Math.sin(S.th), Math.cos(S.th)];
     seg(P(...tip), P(tip[0], tip[1], tip[2] + PEND_L), col.soft, 1.5, [6, 6]);
     const end = [tip[0] + PEND_L * Math.sin(S.ph) * t[0], tip[1] + PEND_L * Math.sin(S.ph) * t[1], tip[2] + PEND_L * Math.cos(S.ph)];
+    // orange arc between the dashed vertical line and the stick = tilt angle
+    const tiltNow = wrap(S.ph);
+    if (Math.abs(tiltNow) > 0.5 * DEG && Math.abs(tiltNow) < 100 * DEG) {
+      ctx.beginPath();
+      for (let i = 0; i <= 20; i++) {
+        const a = i / 20 * tiltNow, rr = PEND_L * 0.45;
+        const p = P(tip[0] + rr * Math.sin(a) * t[0], tip[1] + rr * Math.sin(a) * t[1], tip[2] + rr * Math.cos(a));
+        i ? ctx.lineTo(...p) : ctx.moveTo(...p);
+      }
+      ctx.strokeStyle = col.orange; ctx.lineWidth = 2.5 * dpr; ctx.stroke();
+    }
     seg(P(...tip), P(...end), col.orange, 7);
     const e = P(...end); ctx.beginPath(); ctx.arc(e[0], e[1], 11 * dpr, 0, 2 * Math.PI); ctx.fillStyle = col.orange; ctx.fill();
     const p0 = P(...tip); ctx.beginPath(); ctx.arc(p0[0], p0[1], 7 * dpr, 0, 2 * Math.PI); ctx.fillStyle = col.card; ctx.fill(); ctx.strokeStyle = col.ink; ctx.lineWidth = 2 * dpr; ctx.stroke();
@@ -601,13 +623,20 @@ button { font: inherit; }
   }
 
   // ------------------------------------------------------------ words on screen
-  const side = (v) => (v > 0 ? "phải" : "trái");
+  // describe a lean/push along the arm's tangent the way it looks on screen
+  function dir(v) {
+    const psi = camPsi();
+    const across = Math.cos(S.th - psi);      // how much the tangent points screen-right
+    if (Math.abs(across) > 0.4) return v * across > 0 ? "sang phải" : "sang trái";
+    return v * Math.sin(psi - S.th) > 0 ? "về phía em" : "ra xa";
+  }
   const SWING_STATUS = { idle: ["wait", "Đang ở dưới"], pump: ["wait", "Đang lấy đà"], balance: ["good", "Đứng trên đỉnh"] };
   function updateText() {
     const deg = wrap(S.ph) / DEG;
     $("tiltText").textContent = S.mode === "swing" && Math.abs(deg) > 90
       ? "Gậy đang ở phía dưới"
-      : `Nghiêng ${Math.round(Math.abs(deg))}°` + (Math.abs(deg) >= 0.5 ? ` sang ${side(deg)}` : "");
+      : `Nghiêng ${Math.round(Math.abs(deg))}°` + (Math.abs(deg) >= 0.5 ? ` ${dir(deg)}` : "");
+    $("tiltText").textContent += ` · Cánh tay ở ${Math.round(((S.th / DEG) % 360 + 360) % 360)}°`;
 
     let cls = "good", txt = "Đang đứng";
     if (S.mode === "swing") {
@@ -625,13 +654,13 @@ button { font: inherit; }
     if (S.mode === "manual") {
       ex = S.fallen
         ? `Đổ sau ${S.held.toFixed(1)} giây. Khó đúng không? Bấm <b>Dựng lại</b> và thử <b>Chạy chậm</b>.`
-        : `Gậy đang nghiêng sang <b>${side(deg)}</b>. Đẩy cánh tay sang ${side(deg)} để đỡ nó.`;
+        : `Gậy đang nghiêng <b>${dir(deg)}</b>. Đẩy cánh tay ${dir(deg)} để đỡ nó.`;
     } else if (S.mode === "pd") {
       if (S.fallen) ex = `Đổ sau ${S.held.toFixed(1)} giây. ${hintFor(S.P, S.I, S.D).msg} Đổi số rồi bấm <b>Áp dụng</b>.`;
       else if (Math.abs(deg) < 0.6 && Math.abs(S.rateEst) < 0.3) ex = "Gậy đang đứng yên. Bấm <b>Đẩy</b> để thử robot.";
       else {
         const worse = S.phiEst * S.rateEst > 0;
-        ex = `Gậy nghiêng sang <b>${side(deg)}</b> và đang ${worse ? "đổ thêm" : "quay về giữa"}. Robot đẩy cánh tay sang <b>${side(S.u || 1)}</b> để đỡ.`;
+        ex = `Gậy nghiêng <b>${dir(deg)}</b> và đang ${worse ? "đổ thêm" : "quay về giữa"}. Robot đẩy cánh tay <b>${dir(S.u || 1)}</b> để đỡ.`;
       }
     } else {
       // energy as a share of what is needed to reach the top (mass cancels out)
@@ -654,10 +683,16 @@ button { font: inherit; }
     for (const id of ["manual", "pd", "swing"]) $("panel-" + id).hidden = id !== m;
     S.keyDir = 0; S.trace = []; S.nextTrace = S.t; noteText = "";
     for (const b of document.querySelectorAll(".hold")) b.classList.remove("on");
+    setFollow(m === "manual");   // step 1: camera follows the arm so ◀ ▶ match the screen
     if (m === "manual") standUp(Math.random() < 0.5 ? -1 : 1);
     if (m === "pd") standUp(3);
     if (m === "swing") hangDown();
   }
+  function setFollow(on) {
+    S.follow = on;
+    $("camBtn").textContent = on ? "Góc nhìn: theo cánh tay" : "Góc nhìn: cố định";
+  }
+  $("camBtn").addEventListener("click", () => setFollow(!S.follow));
   for (const b of document.querySelectorAll(".tab")) b.addEventListener("click", () => setMode(b.dataset.mode));
   $("slowBtn").addEventListener("click", () => {
     S.speed = S.speed === 1 ? 0.3 : 1;
