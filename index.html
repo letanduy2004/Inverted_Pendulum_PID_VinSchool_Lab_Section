@@ -129,6 +129,17 @@ button { font: inherit; }
 .energy-label b { color: var(--ink); font-size: 18px; }
 .check { display: flex; gap: 8px; align-items: center; font-size: 15px; }
 
+.lyap-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lyap-head small { font-family: var(--font); font-weight: 500; font-size: 15px; color: var(--soft); }
+.verdict { font-family: var(--font-head); font-weight: 700; font-size: 17px; padding: 6px 14px; border-radius: 999px; background: var(--tint); }
+.verdict.good { color: var(--green); } .verdict.bad { color: var(--red); } .verdict.wait, .verdict.warn { color: var(--yellow); } .verdict.muted { color: var(--soft); }
+.vrow { display: grid; grid-template-columns: auto minmax(0, 1fr) 84px; gap: 10px; align-items: center; }
+.vtrack { position: relative; height: 18px; border-radius: 9px; background: var(--tint); overflow: hidden; }
+.vzone { position: absolute; left: 0; top: 0; bottom: 0; width: 40%; background: color-mix(in srgb, var(--green) 25%, transparent); }
+.vfill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--blue); border-radius: 9px; opacity: 0.85; }
+#vVal { text-align: right; font-size: 18px; }
+#vtrace { width: 100%; height: 140px; display: block; }
+.say.small { font-size: 13.5px; }
 .below { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 860px) { .below { grid-template-columns: minmax(0, 1fr); } }
 #explain { font-size: 17px; }
@@ -255,6 +266,18 @@ button { font: inherit; }
     </div>
   </div>
 
+  <div class="card">
+    <div class="lyap-head">
+      <h2>Is it balanced? <small>(Lyapunov check)</small></h2>
+      <span class="verdict good" id="verdict">Balanced ✓</span>
+    </div>
+    <p class="say">Lyapunov's idea: give the robot a score <b>V</b>, like the "energy" of its mistake. V is 0 only when the stick is perfectly upright and still. If V keeps going <b>down</b> towards 0, the robot is winning.</p>
+    <div class="vrow"><span>V now</span><div class="vtrack"><div class="vzone"></div><div class="vfill" id="vFill"></div></div><b id="vVal">0%</b></div>
+    <canvas id="vtrace" aria-label="V over the last 10 seconds"></canvas>
+    <p id="vWhy"></p>
+    <p class="say small">100% is the score of a stick leaning 5° and standing still. Staying in the green zone (below 10%) for 1 second counts as balanced.</p>
+  </div>
+
   <div class="below">
     <div class="card">
       <h2>What is happening?</h2>
@@ -302,6 +325,7 @@ button { font: inherit; }
     swState: "idle", autoSwing: false, autoCatch: true, pumpRef: 0, manualPump: false,
     held: 0, best: 0, pushes: 0, lastPushT: -10,
     speed: 1, paused: false, trace: [], nextTrace: 0, follow: false,
+    vtrace: [], nextV: 0, lowSince: null, calmSince: null,
   };
   const FIXED_VIEW = 0.65;   // camera azimuth (rad) when the view stays still
   const camPsi = () => (S.follow ? S.th + 0.42 : FIXED_VIEW);
@@ -344,7 +368,7 @@ button { font: inherit; }
     }
     S.vmax = 10;
     if (S.autoCatch && Math.abs(phi) < 20 * DEG && Math.abs(rate) < 200 * DEG) {
-      S.swState = "balance"; S.thRef = S.th; S.u = 0;
+      S.swState = "balance"; S.thRef = S.th; S.u = 0; S.lowSince = null;
       if (!S.autoSwing && S.manualPump) completeGoal("swingManual");
       if (S.autoSwing) completeGoal("swingAuto");
       note("It made it to the top!");
@@ -383,8 +407,15 @@ button { font: inherit; }
         if (Math.abs(wrap(S.ph)) > 20 * DEG) fall(); else S.held += DT;
       }
       if (S.t >= S.nextTrace) { S.trace.push([S.t, wrap(S.ph) / DEG]); S.nextTrace = S.t + 0.02; }
+      if (S.t >= S.nextV) {
+        const v = vNow();
+        S.vtrace.push([S.t, v]); S.nextV = S.t + 0.05;
+        if (v !== null && v < V_OK) { if (S.lowSince === null) S.lowSince = S.t; } else S.lowSince = null;
+        if (v !== null && v < 50) { if (S.calmSince === null) S.calmSince = S.t; } else S.calmSince = null;
+      }
     }
     while (S.trace.length && S.trace[0][0] < S.t - 10) S.trace.shift();
+    while (S.vtrace.length && S.vtrace[0][0] < S.t - 10) S.vtrace.shift();
   }
   function fall() {
     S.fallen = true; S.motor = false; S.u = 0;
@@ -393,11 +424,13 @@ button { font: inherit; }
   function standUp(tiltDeg) {
     S.ph = tiltDeg * DEG; S.phd = 0; S.thd = 0; S.thRef = S.th; S.iSum = 0;
     S.motor = true; S.fallen = false; S.held = 0; S.pushes = 0; S.lastPushT = -10; S.u = 0;
+    S.lowSince = null; S.calmSince = null; S.vtrace = [];
     resetEstimator();
   }
   function hangDown() {
     S.ph = Math.PI + 2 * DEG; S.phd = 0; S.thd = 0; S.motor = true; S.fallen = false; S.u = 0;
     S.swState = S.autoSwing ? "pump" : "idle"; S.pumpRef = S.th; S.manualPump = false;
+    S.lowSince = null; S.vtrace = [];
     resetEstimator();
   }
   function push(dir) {
@@ -448,6 +481,97 @@ button { font: inherit; }
     return { cls: "bad", msg: "<b>D is too weak for this P:</b> the robot pushes hard but cannot brake in time. Try a bigger D." };
   }
 
+  // ------------------------------------------------------------ Lyapunov check
+  // Linearised closed loop around upright, x = [φ, φ', θ, θ'], u = θ''.
+  // V(x) = xᵀXx with AᵀX + XA = −I. A positive-definite X exists exactly when the loop is
+  // stable, and then V always decreases towards 0 (Lyapunov's theorem for linear systems).
+  function gainsNow() {
+    if (S.mode === "swing") return { p: K_BAL[0], d: K_BAL[1], t: K_BAL[2], w: K_BAL[3], i: 0 };
+    return { p: S.P, d: S.D, t: ASSIST[0], w: ASSIST[1], i: S.I };
+  }
+  function closedLoopA(k) {
+    // With I > 0, h = φ' + cθ' + bφ − a∫φ never changes, so ∫φ can be written with the
+    // other states: fold it into effective gains and keep 4 states (otherwise one
+    // eigenvalue sits at 0 and the Lyapunov equation has no unique solution).
+    const u = [k.p + k.i * B_DAMP / A, k.d + k.i / A, k.t, k.w + k.i * C / A];
+    const M = [[0, 1, 0, 0], [0, 0, 0, 0], [0, 0, 0, 1], [0, 0, 0, 0]];
+    for (let j = 0; j < 4; j++) { M[1][j] = -C * u[j]; M[3][j] = u[j]; }
+    M[1][0] += A; M[1][1] -= B_DAMP;
+    return M;
+  }
+  function lyap(M) {   // Kronecker form of AᵀX + XA = −I, solved by Gauss–Jordan
+    const n = M.length, N = n * n;
+    const G = Array.from({ length: N }, () => Array(N + 1).fill(0));
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      const r = i + j * n;
+      for (let k = 0; k < n; k++) { G[r][k + j * n] += M[k][i]; G[r][i + k * n] += M[k][j]; }
+      G[r][N] = i === j ? -1 : 0;
+    }
+    for (let col = 0; col < N; col++) {
+      let piv = col;
+      for (let r = col + 1; r < N; r++) if (Math.abs(G[r][col]) > Math.abs(G[piv][col])) piv = r;
+      if (Math.abs(G[piv][col]) < 1e-12) return null;
+      [G[col], G[piv]] = [G[piv], G[col]];
+      for (let r = 0; r < N; r++) {
+        if (r === col) continue;
+        const f = G[r][col] / G[col][col];
+        if (f !== 0) for (let c = col; c <= N; c++) G[r][c] -= f * G[col][c];
+      }
+    }
+    const X = Array.from({ length: n }, () => Array(n).fill(0));
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) X[i][j] = G[i + j * n][N] / G[i + j * n][i + j * n];
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const m = (X[i][j] + X[j][i]) / 2; X[i][j] = X[j][i] = m; }
+    return X;
+  }
+  const lyapCache = { key: "", X: null, ok: false, ref: 1 };
+  const V_OK = 10;   // % — below this for 1 s counts as balanced (encoder steps of 0.36° set a noise floor)
+  function lyapNow() {
+    const k = gainsNow(), key = `${S.mode === "swing" ? "s" : "p"}|${k.p}|${k.i}|${k.d}`;
+    if (key !== lyapCache.key) {
+      const ok = S.mode === "swing" || stable(S.P, S.I, S.D);
+      const X = ok ? lyap(closedLoopA(k)) : null;
+      lyapCache.key = key; lyapCache.X = X; lyapCache.ok = !!X;
+      lyapCache.ref = X ? X[0][0] * (5 * DEG) ** 2 : 1;   // V of a 5° lean at rest = 100%
+    }
+    return lyapCache;
+  }
+  function vNow() {
+    if (S.mode === "manual") return null;
+    const L = lyapNow();
+    if (!L.ok) return null;
+    const k = gainsNow();
+    let th = S.th - S.thRef;
+    if (k.i > 0) {   // with I the arm settles at a new spot θ* = I·h/(a·k3); measure from there
+      const h = S.phd + C * S.thd + B_DAMP * wrap(S.ph) - A * S.iSum;
+      th -= k.i * h / (A * k.t);
+    }
+    const x = [wrap(S.ph), S.phd, th, S.thd];
+    let v = 0;
+    for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) v += x[i] * L.X[i][j] * x[j];
+    return 100 * v / L.ref;
+  }
+  function vTrend() {   // mean V over the last 0.5 s minus the 0.5 s before
+    const v = S.vtrace.slice(-20).map((r) => r[1]);
+    if (v.length < 20 || v.some((x) => x === null)) return 0;
+    const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+    return mean(v.slice(10)) - mean(v.slice(0, 10));
+  }
+  function verdict() {
+    if (S.mode === "manual") return ["muted", "You are the controller", "In Step 1 there is no formula inside the robot, so there is no V to check. Go to Step 2 to see it."];
+    const L = lyapNow();
+    if (S.mode === "pd" && !L.ok) return ["bad", "Can't balance", "✗ For these P, I, D numbers <b>no Lyapunov function exists</b>, so the robot cannot hold the stick for long."];
+    const exists = "✓ For these numbers a V that always goes down <b>exists</b>, so the robot can balance.";
+    if (S.mode === "pd" && S.fallen) return ["bad", "Fell over", "V shot up when the stick fell. " + exists];
+    if (S.mode === "swing" && S.swState !== "balance") return ["wait", "Not at the top yet", "The robot is still swinging the stick up. V is only used once the stick is near the top."];
+    const v = vNow();
+    if (v !== null && v < V_OK && S.lowSince !== null && S.t - S.lowSince >= 1) return ["good", "Balanced ✓", "V has stayed in the green zone for over a second. " + exists];
+    const upright = Math.abs(wrap(S.ph)) < 2 * DEG && Math.abs(S.phd) < 0.3;
+    if (upright && v > 50 && gainsNow().i > 0) return ["wait", "Stick upright, arm still drifting", "The stick is straight, but I keeps sliding the arm to a new resting spot, and V counts the arm too. Try I = 0 to see the difference."];
+    if (S.calmSince !== null && S.t - S.calmSince > 2.5 && Math.abs(vTrend()) < 3) return ["warn", "Almost balanced (small shake)", "V stays small but will not settle. The sensor only sees steps of 0.36°, so a very big P or D makes the robot shake a little. Try smaller numbers."];
+    if (vTrend() <= 0) return ["wait", "Getting back to balance", "V is going down. " + exists];
+    return ["warn", "Pushed off balance", "V went up. Watch it come back down. " + exists];
+  }
+
   // ------------------------------------------------------------ PID entry
   function readInputs() {
     const out = { ok: true, bad: [] };
@@ -479,7 +603,7 @@ button { font: inherit; }
     e.preventDefault();
     const v = readInputs();
     if (!v.ok) { refreshPid(); return; }
-    S.P = v.P; S.I = v.I; S.D = v.D; S.iSum = 0;
+    S.P = v.P; S.I = v.I; S.D = v.D; S.iSum = 0; S.lowSince = null;
     note(`Applied P ${S.P}, I ${S.I}, D ${S.D}.`);
     if (S.fallen) standUp(Math.random() < 0.5 ? -3 : 3);
     refreshPid();
@@ -524,6 +648,8 @@ button { font: inherit; }
   // ------------------------------------------------------------ drawing
   const rig = $("rig"), rctx = rig.getContext("2d");
   const trace = $("trace"), tctx = trace.getContext("2d");
+  const vcv = $("vtrace"), vctx = vcv.getContext("2d");
+  const vPos = (v) => clamp((Math.log10(Math.max(v, 1e-6)) + 1) / 5, 0, 1);   // 0.1% … 10000%
   let col = {};
   function readColors() {
     const cs = getComputedStyle(document.documentElement);
@@ -622,6 +748,35 @@ button { font: inherit; }
     ctx.stroke(); ctx.restore();
   }
 
+  function drawV() {
+    const [W, H, dpr] = fit(vcv), ctx = vctx;
+    ctx.clearRect(0, 0, W, H);
+    const pl = 64 * dpr, pr = 6 * dpr, pt = 8 * dpr, pb = 20 * dpr;
+    const x = (tt) => pl + (tt - (S.t - 10)) / 10 * (W - pl - pr);
+    const y = (v) => pt + (1 - vPos(v)) * (H - pt - pb);
+    ctx.fillStyle = col.green; ctx.globalAlpha = 0.16;
+    ctx.fillRect(pl, y(V_OK), W - pl - pr, y(0.1) - y(V_OK)); ctx.globalAlpha = 1;
+    ctx.font = `${12 * dpr}px ${getComputedStyle(document.body).fontFamily}`;
+    ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.fillStyle = col.soft;
+    for (const [v, lab] of [[10000, "10000%"], [100, "100%"], [V_OK, V_OK + "%"], [0.1, "0.1%"]]) {
+      ctx.strokeStyle = v === V_OK ? col.green : col.line; ctx.lineWidth = (v === V_OK ? 1.5 : 1) * dpr;
+      ctx.beginPath(); ctx.moveTo(pl, y(v)); ctx.lineTo(W - pr, y(v)); ctx.stroke();
+      ctx.fillText(lab, pl - 6 * dpr, y(v));
+    }
+    ctx.textBaseline = "top";
+    ctx.textAlign = "left"; ctx.fillText("10 s ago", pl, H - pb + 4 * dpr);
+    ctx.textAlign = "right"; ctx.fillText("now", W - pr, H - pb + 4 * dpr);
+    ctx.save(); ctx.beginPath(); ctx.rect(pl, pt, W - pl - pr, H - pt - pb); ctx.clip();
+    ctx.strokeStyle = col.blue; ctx.lineWidth = 2.5 * dpr; ctx.beginPath();
+    let pen = false;
+    for (const [tt, v] of S.vtrace) {
+      if (v === null) { pen = false; continue; }
+      const px = x(tt), py = y(v);
+      if (pen) ctx.lineTo(px, py); else { ctx.moveTo(px, py); pen = true; }
+    }
+    ctx.stroke(); ctx.restore();
+  }
+
   // ------------------------------------------------------------ words on screen
   // describe a lean/push along the arm's tangent the way it looks on screen
   function dir(v) {
@@ -639,16 +794,26 @@ button { font: inherit; }
     $("tiltText").textContent += ` · Arm at ${Math.round(((S.th / DEG) % 360 + 360) % 360)}°`;
 
     let cls = "good", txt = "Standing";
+    const [vcls, vlabel, vwhy] = verdict();
     if (S.mode === "swing") {
       [cls, txt] = SWING_STATUS[S.swState];
       if (S.keyDir && S.swState !== "balance") txt = "You are pushing";
+      if (S.swState === "balance") { cls = vcls === "good" ? "good" : "wait"; txt = vcls === "good" ? "Balanced on top" : "Catching it"; }
       $("timeBox").hidden = true;
     } else {
       if (S.fallen) { cls = "bad"; txt = "It fell"; }
+      else if (S.mode === "pd") { cls = vcls === "good" ? "good" : vcls === "bad" ? "wait" : "wait"; txt = vcls === "good" ? "Balanced" : vcls === "bad" ? "Standing… for now" : "Recovering"; }
       $("timeBox").hidden = false;
       $("timeVal").textContent = S.held.toFixed(1);
     }
     $("status").className = "status " + cls; $("status").textContent = txt;
+
+    // Lyapunov card
+    $("verdict").className = "verdict " + vcls; $("verdict").textContent = vlabel;
+    $("vWhy").innerHTML = vwhy;
+    const vv = vNow();
+    $("vVal").textContent = vv === null ? "—" : vv >= 10000 ? ">10000%" : vv < 0.1 ? "<0.1%" : (vv < 10 ? vv.toFixed(1) : Math.round(vv)) + "%";
+    $("vFill").style.width = (vv === null ? 0 : vPos(vv) * 100) + "%";
 
     let ex;
     if (S.mode === "manual") {
@@ -744,11 +909,11 @@ button { font: inherit; }
   // ------------------------------------------------------------ start
   readColors(); renderGoals(); refreshPid(); setMode("pd");
   for (let i = 0; i < 20; i++) advance(0.05);
-  drawRig(); drawTrace(); updateText();
+  drawRig(); drawTrace(); drawV(); updateText();
   let last = performance.now(), textT = 0;
   function frame(now) {
     const dt = (now - last) / 1000; last = now;
-    advance(dt); drawRig(); drawTrace();
+    advance(dt); drawRig(); drawTrace(); drawV();
     textT += dt;
     if (textT > 0.1) { updateText(); checkGoals(); textT = 0; }
     requestAnimationFrame(frame);
