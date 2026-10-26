@@ -537,6 +537,7 @@ button { font: inherit; }
   }
   function vNow() {
     if (S.mode === "manual") return null;
+    if (S.mode === "swing" && S.swState !== "balance") return null;
     const L = lyapNow();
     if (!L.ok) return null;
     const k = gainsNow();
@@ -775,6 +776,19 @@ button { font: inherit; }
       if (pen) ctx.lineTo(px, py); else { ctx.moveTo(px, py); pen = true; }
     }
     ctx.stroke(); ctx.restore();
+
+    const last = S.vtrace.length ? S.vtrace[S.vtrace.length - 1][1] : null;
+    if (last === null) {
+      const why = S.mode === "manual" ? "Step 1: you are the controller, so there is no V to draw."
+        : S.mode === "swing" ? "V is drawn once the stick reaches the top."
+        : !lyapNow().ok ? "No Lyapunov function exists for these P, I, D, so there is no V to draw."
+        : "Waiting for data…";
+      ctx.font = `600 ${14 * dpr}px ${getComputedStyle(document.body).fontFamily}`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      const tx = (pl + W - pr) / 2, ty = (pt + H - pb) / 2, tw = ctx.measureText(why).width + 24 * dpr;
+      ctx.fillStyle = col.card; ctx.fillRect(tx - tw / 2, ty - 16 * dpr, tw, 32 * dpr);
+      ctx.fillStyle = col.ink; ctx.fillText(why, tx, ty);
+    }
   }
 
   // ------------------------------------------------------------ words on screen
