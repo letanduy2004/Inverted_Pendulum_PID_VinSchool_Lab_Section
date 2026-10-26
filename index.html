@@ -1,0 +1,1068 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Phòng thí nghiệm Con lắc ngược</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@500;600;700&family=Be+Vietnam+Pro:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a lab bench — the live rig on graph paper on the left, the instrument panel on the right,
+   the feedback loop as a strip underneath, then the trace, the "what's happening" note and the challenges. */
+:root {
+  --bg: #edf2f5;
+  --panel: #ffffff;
+  --stage: #f7fafb;
+  --grid: #e1e9ee;
+  --ink: #12202a;
+  --muted: #586a77;
+  --line: #d3dee5;
+  --arm: #2360c4;
+  --pend: #dd5a17;
+  --p: #0a8a78;
+  --d: #7349db;
+  --good: #2c8a3b;
+  --bad: #cc2e58;
+  --warn: #a8700f;
+  --chip: #e7eef2;
+  --font-display: "Lexend", "Be Vietnam Pro", system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c1318; --panel: #131e26; --stage: #101a21; --grid: #1a2731; --ink: #e2ebf0;
+    --muted: #93a5b2; --line: #243541; --arm: #5d9cff; --pend: #ff8a45; --p: #2fd2b6;
+    --d: #a68cff; --good: #5fcf6c; --bad: #ff6a91; --warn: #e5b14c; --chip: #1b2a34;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0c1318; --panel: #131e26; --stage: #101a21; --grid: #1a2731; --ink: #e2ebf0;
+  --muted: #93a5b2; --line: #243541; --arm: #5d9cff; --pend: #ff8a45; --p: #2fd2b6;
+  --d: #a68cff; --good: #5fcf6c; --bad: #ff6a91; --warn: #e5b14c; --chip: #1b2a34;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-inline: 16px; padding-block: 20px 40px;
+}
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 16px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 17px; font-weight: 600; }
+h3 { font-size: 14px; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.lede { color: var(--muted); max-width: 68ch; }
+header { display: grid; gap: 6px; }
+
+/* steps */
+.steps { display: flex; gap: 8px; flex-wrap: wrap; }
+.step {
+  font: inherit; cursor: pointer; text-align: left;
+  display: flex; gap: 10px; align-items: center;
+  padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: var(--panel); color: var(--ink); flex: 1 1 220px; min-width: 0;
+}
+.step b { font-family: var(--font-display); font-weight: 600; display: block; }
+.step small { color: var(--muted); font-size: 12.5px; }
+.step .n {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--font-num); font-weight: 700; font-size: 13px; background: var(--chip); color: var(--muted);
+}
+.step[aria-selected="true"] { border-color: var(--arm); box-shadow: inset 0 0 0 1px var(--arm); }
+.step[aria-selected="true"] .n { background: var(--arm); color: var(--panel); }
+.step:focus-visible, button:focus-visible, input:focus-visible { outline: 2.5px solid var(--arm); outline-offset: 2px; }
+
+/* bench */
+.bench { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 880px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.stage {
+  position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--line);
+  background-color: var(--stage);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+#rig { display: block; width: 100%; aspect-ratio: 4 / 3; max-width: 100%; touch-action: none; }
+.hud { position: absolute; inset: 12px 12px auto 12px; display: flex; justify-content: space-between; gap: 8px; pointer-events: none; flex-wrap: wrap; }
+.tilt { display: grid; gap: 2px; }
+.tilt .big { font-family: var(--font-num); font-weight: 700; font-size: clamp(26px, 5vw, 40px); line-height: 1; font-variant-numeric: tabular-nums; }
+.tilt .lbl { font-size: 12px; color: var(--muted); }
+.hud-right { display: grid; justify-items: end; gap: 6px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+  font-size: 13px; font-weight: 600; background: var(--chip); color: var(--ink);
+}
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pill.good { color: var(--good); } .pill.bad { color: var(--bad); } .pill.warn { color: var(--warn); }
+.timer { font-family: var(--font-num); font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.stage-foot { position: absolute; left: 12px; right: 12px; bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+@media (max-width: 620px) {
+  .stage-foot { position: static; padding: 10px 12px 12px; border-top: 1px solid var(--line); background: var(--panel); }
+}
+
+/* panel */
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 14px; min-width: 0; }
+.panel > section { display: grid; gap: 12px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+button.btn {
+  font: inherit; font-weight: 600; cursor: pointer; border-radius: 10px; padding: 9px 14px;
+  border: 1.5px solid var(--line); background: var(--chip); color: var(--ink);
+}
+button.btn.primary { background: var(--arm); border-color: var(--arm); color: var(--panel); }
+button.btn:active { transform: translateY(1px); }
+button.btn[aria-pressed="true"] { background: var(--arm); border-color: var(--arm); color: var(--panel); }
+.hold {
+  flex: 1 1 0; min-width: 0; padding: 18px 10px; font-size: 17px; user-select: none; -webkit-user-select: none; touch-action: none;
+}
+.hold.on { background: var(--arm); border-color: var(--arm); color: var(--panel); }
+.seg { display: inline-flex; border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; padding: 6px 10px; border: 0; background: var(--panel); color: var(--ink); cursor: pointer; }
+.seg button + button { border-left: 1.5px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--panel); }
+.note { font-size: 13.5px; color: var(--muted); }
+.kbd { font-family: var(--font-num); font-size: 12px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--chip); color: var(--ink); }
+
+.knob { display: grid; gap: 6px; }
+.knob-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.knob-head label { font-weight: 600; display: flex; gap: 8px; align-items: center; }
+.swatch { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.knob-val { font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; }
+.knob small { color: var(--muted); font-size: 12.5px; }
+input[type="range"] { width: 100%; accent-color: var(--arm); }
+
+/* PID number entry */
+.pid { display: grid; gap: 10px; }
+.pid-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 420px) { .pid-grid { grid-template-columns: minmax(0, 1fr); } }
+.pid-field { display: grid; gap: 4px; min-width: 0; }
+.pid-field label { font-family: var(--font-display); font-weight: 700; font-size: 18px; display: flex; gap: 8px; align-items: center; }
+.pid-field input {
+  width: 100%; min-width: 0; font-family: var(--font-num); font-weight: 700; font-size: 20px;
+  padding: 8px 10px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--stage); color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.pid-field input:focus { border-color: var(--arm); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--arm) 25%, transparent); }
+.pid-field input.changed { border-color: var(--warn); }
+.pid-field input.invalid { border-color: var(--bad); }
+.pid-field small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+.pid-err { color: var(--bad); font-size: 13.5px; font-weight: 600; }
+#pidActive b { font-family: var(--font-num); }
+#pidActive.pending { color: var(--warn); font-weight: 600; }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.chip {
+  font: inherit; font-family: var(--font-num); font-size: 12.5px; cursor: pointer;
+  padding: 4px 9px; border-radius: 999px; border: 1px solid var(--line); background: var(--chip); color: var(--ink);
+}
+.chip:hover { border-color: var(--arm); }
+
+/* force bars */
+.bars { display: grid; gap: 7px; }
+.bar { display: grid; grid-template-columns: 92px minmax(0, 1fr) 54px; gap: 8px; align-items: center; font-size: 13px; }
+.track { position: relative; height: 12px; border-radius: 6px; background: var(--chip); overflow: hidden; }
+.track::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1.5px; background: var(--muted); opacity: 0.6; }
+.fill { position: absolute; top: 0; bottom: 0; left: 50%; width: 0; }
+.bar .v { font-family: var(--font-num); text-align: right; font-variant-numeric: tabular-nums; }
+.energy .track::after { display: none; }
+.energy .fill { left: 0; }
+.target { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ink); left: calc(100% / 1.15); }
+
+.hint { border-radius: 12px; padding: 10px 12px; font-size: 14px; background: var(--chip); border-left: 4px solid var(--muted); }
+.hint.good { border-left-color: var(--good); } .hint.bad { border-left-color: var(--bad); } .hint.warn { border-left-color: var(--warn); }
+details summary { cursor: pointer; font-weight: 600; }
+details[open] summary { margin-bottom: 10px; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+
+/* loop strip */
+.loop { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; display: grid; gap: 10px; }
+.loop-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; position: relative; }
+@media (max-width: 760px) { .loop-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.node { border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 4px; min-width: 0; position: relative; }
+.node .k { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.node .t { font-family: var(--font-display); font-weight: 600; }
+.node .val { font-family: var(--font-num); font-size: 13.5px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.node.sense { border-color: color-mix(in srgb, var(--good) 55%, var(--line)); }
+.node.brain { border-color: color-mix(in srgb, var(--arm) 55%, var(--line)); }
+.node.motor { border-color: color-mix(in srgb, var(--d) 55%, var(--line)); }
+.node.plant { border-color: color-mix(in srgb, var(--pend) 55%, var(--line)); }
+.loop-foot { font-size: 13px; color: var(--muted); }
+
+/* lower */
+.lower { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 880px) { .lower { grid-template-columns: minmax(0, 1fr); } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 10px; min-width: 0; }
+#trace { width: 100%; height: 170px; display: block; }
+#explain { font-size: 15px; max-width: 68ch; min-height: 3em; }
+.goals { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.goals li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; align-items: start; font-size: 14px; }
+.goals .box { width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--line); display: grid; place-items: center; font-size: 13px; color: var(--panel); margin-top: 1px; }
+.goals li.done .box { background: var(--good); border-color: var(--good); }
+.goals li.done .gt { color: var(--muted); text-decoration: line-through; }
+.goals .tag { font-size: 11.5px; color: var(--muted); display: block; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Phòng thí nghiệm ảo · Vật lý 10 · Cân bằng &amp; Năng lượng</div>
+    <h1>Con lắc ngược</h1>
+    <p class="lede">Một chiếc robot nhỏ giữ cho cây gậy đứng ngược trên đầu cánh tay, giống như em dựng cây chổi trên lòng bàn tay. Làm lần lượt 3 bước dưới đây.</p>
+  </header>
+
+  <nav class="steps" role="tablist" aria-label="Các bước">
+    <button class="step" role="tab" id="tab-manual" data-mode="manual" aria-selected="false">
+      <span class="n">1</span><span><b>Thử giữ bằng tay</b><small>Em làm bộ não</small></span>
+    </button>
+    <button class="step" role="tab" id="tab-pd" data-mode="pd" aria-selected="true">
+      <span class="n">2</span><span><b>Bộ điều khiển PID</b><small>Nhập số để dạy robot</small></span>
+    </button>
+    <button class="step" role="tab" id="tab-swing" data-mode="swing" aria-selected="false">
+      <span class="n">3</span><span><b>Tự đứng dậy</b><small>Bơm năng lượng như xích đu</small></span>
+    </button>
+  </nav>
+
+  <div class="bench">
+    <div class="stage">
+      <canvas id="rig" aria-label="Hình mô phỏng con lắc ngược"></canvas>
+      <div class="hud">
+        <div class="tilt">
+          <span class="lbl">Góc lệch so với phương thẳng đứng</span>
+          <span class="big" id="hudTilt">0.0°</span>
+        </div>
+        <div class="hud-right">
+          <span class="pill good" id="hudState">Đang giữ</span>
+          <span class="timer" id="hudTimer">Giữ được 0.0 s</span>
+        </div>
+      </div>
+      <div class="stage-foot">
+        <div class="row">
+          <span class="note">Tốc độ</span>
+          <div class="seg" id="speedSeg">
+            <button type="button" data-speed="0.25" aria-pressed="false">0.25×</button>
+            <button type="button" data-speed="0.5" aria-pressed="false">0.5×</button>
+            <button type="button" data-speed="1" aria-pressed="true">1×</button>
+          </div>
+          <button type="button" class="btn" id="pauseBtn" aria-pressed="false">Tạm dừng</button>
+        </div>
+        <div class="row">
+          <span class="note">Camera</span>
+          <div class="seg" id="camSeg">
+            <button type="button" data-cam="follow" aria-pressed="true">Theo cánh tay</button>
+            <button type="button" data-cam="fixed" aria-pressed="false">Đứng yên</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <!-- STEP 1 -->
+      <section id="panel-manual" hidden>
+        <h2>Bước 1 · Em thử làm bộ não</h2>
+        <p class="note">Con lắc nghiêng bên nào thì đẩy cánh tay về bên đó để "đỡ" nó, giống khi dựng chổi trên tay. Giữ phím <span class="kbd">←</span> <span class="kbd">→</span> (hoặc <span class="kbd">A</span> <span class="kbd">D</span>), hay bấm giữ hai nút dưới đây.</p>
+        <div class="row">
+          <button type="button" class="btn hold" id="mLeft">◀ Đẩy trái</button>
+          <button type="button" class="btn hold" id="mRight">Đẩy phải ▶</button>
+        </div>
+        <div class="row">
+          <button type="button" class="btn primary" id="mReset">Dựng lại</button>
+          <span class="note">Kỷ lục của em: <b id="mBest" class="knob-val">0.0 s</b></span>
+        </div>
+        <div class="hint warn">Khó lắm đúng không? Hãy chọn tốc độ <b>0.25×</b>. Ngoài đời thật mọi thứ xảy ra nhanh gấp 4 lần, vì vậy người ta phải giao việc này cho máy tính.</div>
+      </section>
+
+      <!-- STEP 2 -->
+      <section id="panel-pd">
+        <h2>Bước 2 · Nhập số PID cho robot</h2>
+        <form class="pid" id="pidForm" novalidate>
+          <div class="pid-grid">
+            <div class="pid-field">
+              <label for="inP"><span class="swatch" style="background: var(--p)"></span>P</label>
+              <input id="inP" type="number" inputmode="decimal" min="0" max="1000" step="any" value="150">
+              <small>Lệch nhiều thì đẩy mạnh (như lò xo)</small>
+            </div>
+            <div class="pid-field">
+              <label for="inI"><span class="swatch" style="background: var(--warn)"></span>I</label>
+              <input id="inI" type="number" inputmode="decimal" min="0" max="1500" step="any" value="0">
+              <small>Lệch lâu thì cộng dồn để sửa</small>
+            </div>
+            <div class="pid-field">
+              <label for="inD"><span class="swatch" style="background: var(--d)"></span>D</label>
+              <input id="inD" type="number" inputmode="decimal" min="0" max="200" step="any" value="20">
+              <small>Đổ nhanh thì phanh sớm (như phanh)</small>
+            </div>
+          </div>
+          <div class="row">
+            <button type="submit" class="btn primary" id="pidApply">Áp dụng PID</button>
+            <span class="note" id="pidActive">Robot đang dùng: P = 150 · I = 0 · D = 20</span>
+          </div>
+          <p class="pid-err" id="pidErr" hidden></p>
+          <div class="presets">
+            <span class="note">Bộ số để thử:</span>
+            <button type="button" class="chip" data-p="150" data-i="0" data-d="20">150 · 0 · 20</button>
+            <button type="button" class="chip" data-p="150" data-i="0" data-d="0">150 · 0 · 0</button>
+            <button type="button" class="chip" data-p="60" data-i="0" data-d="20">60 · 0 · 20</button>
+            <button type="button" class="chip" data-p="150" data-i="400" data-d="20">150 · 400 · 20</button>
+          </div>
+        </form>
+
+        <div class="hint" id="pdHint"></div>
+
+        <div class="bars" aria-label="Lực đẩy của motor">
+          <div class="bar"><span>Phần của P</span><div class="track"><div class="fill" id="barP" style="background: var(--p)"></div></div><span class="v" id="barPv">0%</span></div>
+          <div class="bar"><span>Phần của I</span><div class="track"><div class="fill" id="barI" style="background: var(--warn)"></div></div><span class="v" id="barIv">0%</span></div>
+          <div class="bar"><span>Phần của D</span><div class="track"><div class="fill" id="barD" style="background: var(--d)"></div></div><span class="v" id="barDv">0%</span></div>
+          <div class="bar"><span><b>Motor đẩy</b></span><div class="track"><div class="fill" id="barU" style="background: var(--arm)"></div></div><span class="v" id="barUv">0%</span></div>
+        </div>
+
+        <div class="row">
+          <button type="button" class="btn primary" id="pdReset">Dựng lên</button>
+          <button type="button" class="btn" id="pushL">← Đẩy nhẹ</button>
+          <button type="button" class="btn" id="pushR">Đẩy nhẹ →</button>
+        </div>
+
+        <details>
+          <summary>Thí nghiệm nâng cao</summary>
+          <div class="knob">
+            <div class="knob-head">
+              <label for="kDelay">Độ trễ của cảm biến</label>
+              <span class="knob-val" id="kDelayv">0 ms</span>
+            </div>
+            <input type="range" id="kDelay" min="0" max="150" step="5" value="0">
+            <small>Giống trò bịt mắt dựng chổi: bạn hô hướng cho em nhưng chậm một chút. Trễ càng nhiều thì càng dễ đổ.</small>
+          </div>
+          <label class="check"><input type="checkbox" id="assist" checked> Giữ cánh tay không trôi xa (tắt đi để thấy cánh tay chạy vòng vòng)</label>
+        </details>
+      </section>
+
+      <!-- STEP 3 -->
+      <section id="panel-swing" hidden>
+        <h2>Bước 3 · Tự đứng dậy từ dưới lên</h2>
+        <p class="note">Con lắc đang thõng xuống. Motor không đủ mạnh để nhấc thẳng lên, nên robot đẩy qua lại đúng nhịp để <b>cơ năng</b> tăng dần, giống như em nhún xích đu.</p>
+        <div class="bars energy">
+          <div class="bar"><span>Thế năng W<sub>t</sub></span><div class="track"><div class="fill" id="eWt" style="background: var(--arm)"></div><div class="target"></div></div><span class="v" id="eWtv">0</span></div>
+          <div class="bar"><span>Động năng W<sub>đ</sub></span><div class="track"><div class="fill" id="eWd" style="background: var(--pend)"></div><div class="target"></div></div><span class="v" id="eWdv">0</span></div>
+          <div class="bar"><span><b>Cơ năng W</b></span><div class="track"><div class="fill" id="eW" style="background: var(--good)"></div><div class="target"></div></div><span class="v" id="eWv">0</span></div>
+        </div>
+        <p class="note">Vạch đen là <b id="eNeed">147 mJ</b>, năng lượng cần để con lắc lên tới đỉnh. Đơn vị: mJ (mili-jun).</p>
+        <div class="row">
+          <button type="button" class="btn primary" id="swAuto" aria-pressed="false">Robot tự làm</button>
+          <button type="button" class="btn" id="swReset">Thả về đáy</button>
+        </div>
+        <p class="note">Hoặc em tự bơm: khi quả nặng đi qua điểm thấp nhất, đẩy cánh tay <b>ngược chiều</b> chuyển động của quả nặng.</p>
+        <div class="row">
+          <button type="button" class="btn hold" id="sLeft">◀ Đẩy trái</button>
+          <button type="button" class="btn hold" id="sRight">Đẩy phải ▶</button>
+        </div>
+        <label class="check"><input type="checkbox" id="autoCatch" checked> Robot tự bắt và giữ khi con lắc lên gần đỉnh</label>
+      </section>
+    </div>
+  </div>
+
+  <section class="loop" aria-label="Vòng phản hồi">
+    <h2>Vòng phản hồi: đo, tính, đẩy, rồi lặp lại</h2>
+    <div class="loop-row">
+      <div class="node sense"><span class="k">① Cảm biến</span><span class="t">Encoder đo góc</span><span class="val" id="lpSense">—</span></div>
+      <div class="node brain"><span class="k">② Bộ não</span><span class="t" id="lpBrainT">Vi điều khiển tính</span><span class="val" id="lpBrain">—</span></div>
+      <div class="node motor"><span class="k">③ Motor</span><span class="t">Quay cánh tay</span><span class="val" id="lpMotor">—</span></div>
+      <div class="node plant"><span class="k">④ Con lắc</span><span class="t">Góc thay đổi</span><span class="val" id="lpPlant">—</span></div>
+    </div>
+    <p class="loop-foot" id="loopFoot">Robot lặp lại vòng này 500 lần mỗi giây (cứ 2 mili-giây một lần). Encoder đếm 1000 vạch mỗi vòng, nên nó thấy được góc lệch nhỏ tới 0.36°.</p>
+  </section>
+
+  <div class="lower">
+    <div class="card">
+      <h2>Đang xảy ra gì?</h2>
+      <p id="explain">—</p>
+      <canvas id="trace" aria-label="Đồ thị góc lệch theo thời gian"></canvas>
+      <div class="legend"><span><span class="swatch" style="background: var(--pend)"></span>Góc lệch (10 giây gần nhất)</span><span><span class="swatch" style="background: var(--bad)"></span>Giới hạn ±20°: vượt qua là đổ</span></div>
+    </div>
+    <div class="card">
+      <h2>Thử thách</h2>
+      <ul class="goals" id="goals"></ul>
+      <button type="button" class="btn" id="goalsReset">Làm lại từ đầu</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------------------------------------------------------------- model
+  // Rotary (Furuta) pendulum, linearised constants from the simulator project:
+  // φ'' = a·sinφ − c·cosφ·θ'' + sinφ·cosφ·θ'² − b·φ'
+  const A = 49.05, C = 0.75, B_DAMP = 0.05;
+  const ACC_MAX = 110;            // rad/s², stepper acceleration limit
+  const DT = 0.0005, CTRL_DT = 0.002;
+  const ENC_Q = 2 * Math.PI / 1000;
+  const DEG = Math.PI / 180;
+  const ARM_R = 0.15, PEND_L = 0.30, TOWER_H = 0.20;
+  const M = 0.05, LC = PEND_L / 2, J = M * PEND_L * PEND_L / 3, G = 9.81;
+  const E_TOP = 2 * M * G * LC;   // J
+  const K_BAL = [388.6, 55.5, 26.4, 17.6];
+  const ASSIST = [1, 2];          // arm-centering helper for the student P–D
+  const LIMITS = { P: [0, 1000], I: [0, 1500], D: [0, 200] };   // allowed PID entries
+
+  const $ = (id) => document.getElementById(id);
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const wrap = (a) => { a = (a + Math.PI) % (2 * Math.PI); if (a < 0) a += 2 * Math.PI; return a - Math.PI; };
+  const fmt = (x, d = 1) => (Math.abs(x) < 0.5 * 10 ** -d ? 0 : x).toFixed(d);
+
+  const S = {
+    mode: "pd", th: 0, thd: 0, ph: 3 * DEG, phd: 0, alpha: 0, u: 0, vmax: 40, motor: true,
+    t: 0, nextCtrl: 0, fallen: false, keyDir: 0,
+    meas: [], hist: [], lastRaw: null, unwrapped: 0, phiEst: 0, rateEst: 0,
+    P: 150, I: 0, D: 20, delayMs: 0, assist: true, thRef: 0, pPart: 0, iPart: 0, dPart: 0, iSum: 0,
+    swState: "idle", autoSwing: false, autoCatch: true, pumpRef: 0, manualSinceBottom: false,
+    held: 0, best: 0, pushes: 0, lastPushT: -10, streakMaxP: 0, streakMinDelay: 0,
+    speed: 1, paused: false, follow: true, trace: [], nextTrace: 0, flash: 0,
+  };
+
+  // ---------------------------------------------------------------- estimator (what the MCU sees)
+  function resetEstimator() { S.meas = []; S.hist = []; S.lastRaw = null; S.rateEst = 0; S.nextCtrl = S.t; }
+  function sense() {
+    const q = Math.round(wrap(S.ph) / ENC_Q) * ENC_Q;
+    S.meas.push([S.t, q]);
+    const delay = S.mode === "pd" ? S.delayMs / 1000 : 0;
+    const target = S.t - delay;
+    while (S.meas.length > 1 && S.meas[1][0] <= target + 1e-9) S.meas.shift();
+    const phm = S.meas[0][1];
+    S.unwrapped = S.lastRaw === null ? phm : S.unwrapped + wrap(phm - S.lastRaw);
+    S.lastRaw = phm;
+    S.hist.push([S.t, S.unwrapped]);
+    while (S.hist.length > 2 && S.t - S.hist[1][0] >= 0.008) S.hist.shift();
+    const [t0, p0] = S.hist[0];
+    if (S.t > t0) {
+      const raw = (S.unwrapped - p0) / (S.t - t0);
+      S.rateEst += Math.min(1, CTRL_DT / 0.004) * (raw - S.rateEst);
+    }
+    S.phiEst = phm;
+  }
+
+  // ---------------------------------------------------------------- controllers
+  function control() {
+    sense();
+    const phi = S.phiEst, rate = S.rateEst;
+    if (S.mode === "manual") {
+      S.vmax = 12;
+      S.u = S.motor ? S.keyDir * 45 : 0;
+      return;
+    }
+    if (S.mode === "pd") {
+      S.vmax = 40;
+      if (!S.motor) { S.u = 0; return; }
+      S.iSum = clamp(S.iSum + phi * CTRL_DT, -0.5, 0.5);   // anti-windup
+      S.pPart = S.P * phi;
+      S.iPart = S.I * S.iSum;
+      S.dPart = S.D * rate;
+      let u = S.pPart + S.iPart + S.dPart;
+      if (S.assist) u += ASSIST[0] * (S.th - S.thRef) + ASSIST[1] * S.thd;
+      S.u = u;
+      return;
+    }
+    // swing-up
+    if (S.swState === "balance") {
+      S.vmax = 40;
+      const th = S.th - S.thRef;
+      S.u = K_BAL[0] * phi + K_BAL[1] * rate + K_BAL[2] * th + K_BAL[3] * S.thd;
+      if (Math.abs(phi) > 20 * DEG) {
+        S.swState = S.autoSwing ? "pump" : "idle";
+        S.pumpRef = S.th; S.manualSinceBottom = false;
+        note("Con lắc rơi xuống." + (S.autoSwing ? " Robot bơm năng lượng lại." : ""));
+      }
+      return;
+    }
+    S.vmax = 10;
+    if (S.autoCatch && Math.abs(phi) < 20 * DEG && Math.abs(rate) < 200 * DEG) {
+      S.swState = "balance"; S.thRef = S.th;
+      if (!S.autoSwing && S.manualSinceBottom) completeGoal("swingManual");
+      note("Bắt được! Robot chuyển sang giữ thăng bằng.");
+      S.u = 0;
+      return;
+    }
+    if (S.keyDir !== 0) { S.u = S.keyDir * 30; S.manualSinceBottom = true; return; }
+    if (S.swState === "pump") {
+      const E = rate * rate / (2 * A) + Math.cos(phi) - 1;
+      const s = rate * Math.cos(phi) >= 0 ? 1 : -1;
+      const mag = clamp(E / 0.1, -1, 1);
+      const th = S.th - S.pumpRef;
+      S.u = clamp(30 * mag * s - 6 * th - 5 * S.thd, -30, 30);
+      return;
+    }
+    S.u = -5 * S.thd;   // idle: gently stop the arm
+  }
+
+  // ---------------------------------------------------------------- physics
+  function physics(dt) {
+    let a;
+    if (S.motor) {
+      a = clamp(S.u, -ACC_MAX, ACC_MAX);
+      if (Math.abs(S.thd) >= S.vmax && a * S.thd > 0) a = 0;
+    } else {
+      a = -3 * S.thd;
+    }
+    S.alpha = a;
+    const s = Math.sin(S.ph), c = Math.cos(S.ph);
+    const phdd = A * s - C * c * a + s * c * S.thd * S.thd - B_DAMP * S.phd;
+    S.thd += a * dt; S.th += S.thd * dt;
+    S.phd += phdd * dt; S.ph += S.phd * dt;
+    S.t += dt;
+  }
+
+  function advance(realDt) {
+    if (S.paused) return;
+    const simDt = Math.min(realDt, 0.05) * S.speed;
+    const n = Math.max(1, Math.round(simDt / DT));
+    for (let i = 0; i < n; i++) {
+      if (S.t >= S.nextCtrl) { control(); S.nextCtrl += CTRL_DT; }
+      physics(DT);
+      if (S.mode !== "swing" && !S.fallen) {
+        if (Math.abs(wrap(S.ph)) > 20 * DEG) fall();
+        else S.held += DT;
+      }
+      if (S.t >= S.nextTrace) { S.trace.push([S.t, wrap(S.ph) / DEG]); S.nextTrace = S.t + 0.02; }
+    }
+    while (S.trace.length && S.trace[0][0] < S.t - 10) S.trace.shift();
+    if (S.mode === "pd" && !S.fallen) {
+      S.streakMaxP = Math.max(S.streakMaxP, S.P);
+      S.streakMinDelay = Math.min(S.streakMinDelay, S.delayMs);
+    }
+  }
+
+  function fall() {
+    S.fallen = true; S.motor = false; S.u = 0;
+    if (S.held > S.best) S.best = S.held;
+    if (S.mode === "manual") { $("mBest").textContent = fmt(S.best) + " s"; }
+  }
+
+  // ---------------------------------------------------------------- resets
+  function standUp(tiltDeg) {
+    S.ph = tiltDeg * DEG; S.phd = 0; S.thd = 0; S.thRef = S.th;
+    S.motor = true; S.fallen = false; S.held = 0; S.pushes = 0; S.lastPushT = -10; S.u = 0; S.iSum = 0;
+    S.streakMaxP = S.P; S.streakMinDelay = S.delayMs;
+    resetEstimator();
+  }
+  function hangDown() {
+    S.ph = Math.PI + 2 * DEG; S.phd = 0; S.thd = 0; S.motor = true; S.fallen = false; S.u = 0;
+    S.swState = S.autoSwing ? "pump" : "idle"; S.pumpRef = S.th; S.manualSinceBottom = false;
+    resetEstimator();
+  }
+  function push(dir) {
+    if (S.fallen) return;
+    S.phd += dir * 60 * DEG; S.pushes += 1; S.lastPushT = S.t; S.flash = 0.35 * dir;
+  }
+
+  let lastNote = "", lastNoteT = -1;
+  function note(msg) { lastNote = msg; lastNoteT = S.t; }
+
+  // ---------------------------------------------------------------- stability hint (linear model)
+  // Closed loop around upright: (s² − a)(s² − k4·s − k3) + c·(D·s³ + P·s² + I·s) = 0
+  function closedLoopPoly(P, I, D, assist) {
+    if (assist) {
+      const [k3, k4] = ASSIST;
+      return [1, C * D - k4, C * P - A - k3, A * k4 + C * I, A * k3];
+    }
+    // without arm feedback one root sits at s = 0 (the arm drifts); test the rest
+    return I > 0 ? [1, C * D, C * P - A, C * I] : [1, C * D, C * P - A];
+  }
+  function routhStable(c) {
+    const n = c.length - 1;
+    if (c.some((x) => !(x > 0))) return false;
+    let prev = c.filter((_, i) => i % 2 === 0), cur = c.filter((_, i) => i % 2 === 1);
+    for (let k = 0; k < n - 1; k++) {
+      while (cur.length < prev.length) cur.push(0);
+      if (!(cur[0] > 0)) return false;
+      const next = [];
+      for (let j = 0; j < prev.length - 1; j++) next.push((cur[0] * (prev[j + 1] || 0) - prev[0] * (cur[j + 1] || 0)) / cur[0]);
+      prev = cur; cur = next.length ? next : [0];
+    }
+    return cur[0] > 0 || n <= 1;
+  }
+  // "stable" with a margin means every root has real part < −margin
+  function stable(P, I, D, assist, margin = 0) {
+    const c = closedLoopPoly(P, I, D, assist), n = c.length - 1, h = -margin;
+    for (let i = 0; i < n; i++) for (let j = 1; j <= n - i; j++) c[j] += h * c[j - 1];
+    return routhStable(c);
+  }
+  function pMin(I, D, assist) {
+    for (let P = 0; P <= 1000; P += 1) if (stable(P, I, D, assist)) return P;
+    return null;
+  }
+  function hintFor(P, I, D) {
+    const k3 = S.assist ? ASSIST[0] : 0, k4 = S.assist ? ASSIST[1] : 0;
+    const ok = stable(P, I, D, S.assist);
+    let cls = "good", msg;
+    if (ok && !stable(P, I, D, S.assist, 0.15)) {
+      cls = "warn";
+      msg = "<b>Giữ được nhưng rất yếu.</b> Con lắc đứng được, nhưng cánh tay trôi dần ra xa nên bị đẩy là dễ đổ." +
+            (I > 0 ? " Thử giảm I." : " Thử giảm D một chút hoặc tăng P.");
+    } else if (ok) {
+      msg = "Theo tính toán, bộ PID này <b>giữ được</b> con lắc.";
+      if (P > 300) { msg += " P rất lớn: chỉ lệch vài độ là motor đã đẩy hết sức (100%)."; cls = "warn"; }
+      if (I > 0) msg += " Nhưng I làm cánh tay chạy xa hơn và con lắc lâu yên hơn. Với con lắc này nên để I = 0 hoặc rất nhỏ.";
+    } else if (C * P <= A + k3) {
+      cls = "bad";
+      const lo = pMin(I, D, S.assist);
+      msg = "<b>P quá nhỏ.</b> Lực đẩy thua trọng lực nên con lắc từ từ đổ về một phía." +
+            (lo !== null ? ` Với I = ${I} và D = ${D}, cần P từ khoảng <b>${lo}</b> trở lên.` : " Hãy tăng cả P và D.");
+    } else if (C * D <= k4) {
+      cls = "bad";
+      msg = "<b>Chưa có phanh D.</b> Con lắc sẽ lắc qua lắc lại ngày càng mạnh rồi đổ. Hãy nhập D lớn hơn.";
+    } else if (I > 0 && stable(P, 0, D, S.assist)) {
+      cls = "bad";
+      msg = "<b>I quá lớn.</b> Phần cộng dồn đẩy quá tay nên con lắc lắc ngày càng mạnh rồi đổ. Thử I = 0.";
+    } else {
+      cls = "bad";
+      msg = "<b>D quá yếu so với P.</b> Robot đẩy mạnh nhưng phanh không kịp nên con lắc lắc càng lúc càng to. Tăng D hoặc giảm P.";
+    }
+    if (S.delayMs >= 40 && cls !== "bad") { msg += ` Có độ trễ ${S.delayMs} ms: thử bấm Đẩy nhẹ xem robot còn kịp phản ứng không.`; cls = "warn"; }
+    if (!S.assist) msg += " (Đã tắt giữ cánh tay, nên cánh tay sẽ trôi dần.)";
+    return { cls, msg };
+  }
+  function updateHint() {
+    const v = readInputs();
+    const el = $("pdHint");
+    const use = v.ok ? v : { P: S.P, I: S.I, D: S.D };
+    const pending = v.ok && (v.P !== S.P || v.I !== S.I || v.D !== S.D);
+    const h = hintFor(use.P, use.I, use.D);
+    el.className = "hint " + h.cls;
+    el.innerHTML = (pending ? "<b>Dự đoán</b> cho bộ số vừa nhập (chưa áp dụng): " : "") + h.msg;
+  }
+
+  // ---------------------------------------------------------------- challenges
+  const GOALS = [
+    { id: "manual3", step: "Bước 1", text: "Tự tay giữ con lắc đứng được 3 giây." },
+    { id: "pd10", step: "Bước 2", text: "Nhập bộ số PID giúp robot giữ được 10 giây." },
+    { id: "push3", step: "Bước 2", text: "Bấm Đẩy nhẹ 3 lần mà con lắc vẫn không đổ." },
+    { id: "lowP", step: "Bước 2", text: "Tìm P nhỏ: giữ được 10 giây với P dưới 100." },
+    { id: "noD", step: "Bước 2", text: "Nhập D = 0 rồi áp dụng. Con lắc làm gì? (xem đồ thị)" },
+    { id: "bigI", step: "Bước 2", text: "Nhập I = 400 rồi bấm Đẩy nhẹ. Cánh tay chạy xa hơn hay gần hơn khi I = 0?" },
+    { id: "delay", step: "Bước 2 · nâng cao", text: "Giữ được 10 giây khi độ trễ từ 60 ms trở lên." },
+    { id: "swingAuto", step: "Bước 3", text: "Xem robot tự đưa con lắc từ dưới lên đỉnh." },
+    { id: "swingManual", step: "Bước 3", text: "Tự tay bơm năng lượng đưa con lắc lên đỉnh (tắt Robot tự làm)." },
+  ];
+  let done = {};
+  try { done = JSON.parse(localStorage.getItem("conlacnguoc.goals") || "{}") || {}; } catch (e) { done = {}; }
+  function renderGoals() {
+    $("goals").innerHTML = GOALS.map((g) =>
+      `<li class="${done[g.id] ? "done" : ""}"><span class="box">${done[g.id] ? "✓" : ""}</span>` +
+      `<span><span class="gt">${g.text}</span><span class="tag">${g.step}</span></span></li>`).join("");
+  }
+  function completeGoal(id) {
+    if (done[id]) return;
+    done[id] = true;
+    try { localStorage.setItem("conlacnguoc.goals", JSON.stringify(done)); } catch (e) {}
+    renderGoals();
+  }
+  function checkGoals() {
+    if (S.mode === "manual" && !S.fallen && S.held >= 3) completeGoal("manual3");
+    if (S.mode === "pd" && !S.fallen) {
+      if (S.held >= 10) completeGoal("pd10");
+      if (S.pushes >= 3 && S.t - S.lastPushT > 1.5) completeGoal("push3");
+      if (S.held >= 10 && S.streakMaxP < 100) completeGoal("lowP");
+      if (S.held >= 10 && S.streakMinDelay >= 60) completeGoal("delay");
+    }
+    if (S.mode === "pd" && S.D === 0 && S.held > 0.8) completeGoal("noD");
+    if (S.mode === "pd" && S.I >= 400 && S.pushes >= 1 && S.held > 3) completeGoal("bigI");
+    if (S.mode === "swing" && S.autoSwing && S.swState === "balance") completeGoal("swingAuto");
+  }
+
+  // ---------------------------------------------------------------- drawing
+  const rig = $("rig"), rctx = rig.getContext("2d");
+  const trace = $("trace"), tctx = trace.getContext("2d");
+  let colors = {};
+  function readColors() {
+    const cs = getComputedStyle(document.documentElement);
+    for (const k of ["ink", "muted", "line", "arm", "pend", "p", "d", "good", "bad", "warn", "stage", "grid", "panel", "chip"])
+      colors[k] = cs.getPropertyValue("--" + k).trim();
+  }
+  function fitCanvas(cv) {
+    const r = cv.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    return [w, h, dpr];
+  }
+
+  function drawRig() {
+    const [W, H, dpr] = fitCanvas(rig);
+    const ctx = rctx;
+    ctx.clearRect(0, 0, W, H);
+    const scale = Math.min(W, H * 1.25) * 1.05;
+    const cx = W * 0.5, cy = H * 0.78;
+    const psi = S.follow ? S.th + 0.42 : 0.65, el = 0.32;
+    const R = [-Math.sin(psi), Math.cos(psi), 0];
+    const U = [-Math.cos(psi) * Math.sin(el), -Math.sin(psi) * Math.sin(el), Math.cos(el)];
+    const P = (x, y, z) => [cx + scale * (x * R[0] + y * R[1]), cy - scale * (x * U[0] + y * U[1] + z * U[2])];
+    const line = (a, b, col, w, dash) => {
+      ctx.strokeStyle = col; ctx.lineWidth = w * dpr; ctx.lineCap = "round"; ctx.setLineDash(dash ? dash.map((d) => d * dpr) : []);
+      ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke(); ctx.setLineDash([]);
+    };
+    const ring = (rr, z, col, w, fill) => {
+      ctx.beginPath();
+      for (let i = 0; i <= 64; i++) { const a = (i / 64) * 2 * Math.PI; const p = P(rr * Math.cos(a), rr * Math.sin(a), z); i ? ctx.lineTo(...p) : ctx.moveTo(...p); }
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      ctx.strokeStyle = col; ctx.lineWidth = w * dpr; ctx.stroke();
+    };
+
+    // floor disc with degree ticks (shows the arm turning when the camera follows)
+    ring(0.24, 0, colors.line, 1.2, colors.panel);
+    for (let k = 0; k < 24; k++) {
+      const a = (k / 24) * 2 * Math.PI, r0 = k % 6 === 0 ? 0.205 : 0.222;
+      line(P(r0 * Math.cos(a), r0 * Math.sin(a), 0), P(0.24 * Math.cos(a), 0.24 * Math.sin(a), 0), colors.muted, k % 6 === 0 ? 1.6 : 1);
+    }
+    const lab = P(0.17, 0, 0);
+    ctx.fillStyle = colors.muted; ctx.font = `${11 * dpr}px ${getComputedStyle(document.body).fontFamily}`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("0°", ...lab);
+
+    // tower + motor
+    ring(0.045, 0, colors.ink, 1.2, colors.chip);
+    line(P(0, 0, 0), P(0, 0, TOWER_H), colors.ink, 10);
+    ring(0.04, TOWER_H, colors.ink, 1.2, colors.chip);
+
+    // arm
+    const tip = [ARM_R * Math.cos(S.th), ARM_R * Math.sin(S.th), TOWER_H];
+    line(P(0, 0, TOWER_H), P(...tip), colors.arm, 9);
+    const t = [-Math.sin(S.th), Math.cos(S.th), 0];
+
+    // upright reference and tilt arc
+    const top = [tip[0], tip[1], tip[2] + PEND_L];
+    line(P(...tip), P(...top), colors.muted, 1.2, [5, 5]);
+    const ph = wrap(S.ph);
+    const pend = [tip[0] + PEND_L * Math.sin(S.ph) * t[0], tip[1] + PEND_L * Math.sin(S.ph) * t[1], tip[2] + PEND_L * Math.cos(S.ph)];
+    if (Math.abs(ph) < 100 * DEG && Math.abs(ph) > 0.4 * DEG) {
+      ctx.beginPath();
+      const rr = PEND_L * 0.45;
+      for (let i = 0; i <= 24; i++) {
+        const a = (i / 24) * ph;
+        const p = P(tip[0] + rr * Math.sin(a) * t[0], tip[1] + rr * Math.sin(a) * t[1], tip[2] + rr * Math.cos(a));
+        i ? ctx.lineTo(...p) : ctx.moveTo(...p);
+      }
+      ctx.strokeStyle = colors.pend; ctx.lineWidth = 2 * dpr; ctx.stroke();
+    }
+
+    // pendulum
+    line(P(...tip), P(...pend), colors.pend, 6);
+    const pp = P(...pend);
+    ctx.beginPath(); ctx.arc(pp[0], pp[1], 9 * dpr, 0, 2 * Math.PI); ctx.fillStyle = colors.pend; ctx.fill();
+    const tp = P(...tip);
+    ctx.beginPath(); ctx.arc(tp[0], tp[1], 7 * dpr, 0, 2 * Math.PI); ctx.fillStyle = colors.panel; ctx.fill();
+    ctx.strokeStyle = colors.ink; ctx.lineWidth = 2 * dpr; ctx.stroke();
+
+    // motor push arrow (arm acceleration) at the tip, along the tangent
+    const acc = S.motor ? S.alpha : 0;
+    const frac = clamp(acc / ACC_MAX, -1, 1);
+    if (Math.abs(frac) > 0.02) {
+      const len = 0.16 * frac;
+      const a0 = [tip[0], tip[1], tip[2] - 0.035];
+      const a1 = [a0[0] + len * t[0], a0[1] + len * t[1], a0[2]];
+      const p0 = P(...a0), p1 = P(...a1);
+      line(p0, p1, colors.arm, 4);
+      const ang = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]), hs = 11 * dpr;
+      ctx.beginPath();
+      ctx.moveTo(...p1);
+      ctx.lineTo(p1[0] - hs * Math.cos(ang - 0.45), p1[1] - hs * Math.sin(ang - 0.45));
+      ctx.lineTo(p1[0] - hs * Math.cos(ang + 0.45), p1[1] - hs * Math.sin(ang + 0.45));
+      ctx.closePath(); ctx.fillStyle = colors.arm; ctx.fill();
+    }
+    // push flash
+    if (Math.abs(S.flash) > 0.01) {
+      const dir = Math.sign(S.flash);
+      const mid = [tip[0] + 0.6 * PEND_L * Math.sin(S.ph) * t[0], tip[1] + 0.6 * PEND_L * Math.sin(S.ph) * t[1], tip[2] + 0.6 * PEND_L * Math.cos(S.ph)];
+      const from = [mid[0] - dir * 0.12 * t[0], mid[1] - dir * 0.12 * t[1], mid[2]];
+      line(P(...from), P(...mid), colors.bad, 3, [4, 4]);
+    }
+  }
+
+  function drawTrace() {
+    const [W, H, dpr] = fitCanvas(trace);
+    const ctx = tctx;
+    ctx.clearRect(0, 0, W, H);
+    const swing = S.mode === "swing";
+    const ymax = swing ? 180 : 30;
+    const padL = 38 * dpr, padR = 8 * dpr, padT = 8 * dpr, padB = 20 * dpr;
+    const x = (tt) => padL + ((tt - (S.t - 10)) / 10) * (W - padL - padR);
+    const y = (v) => padT + (1 - (v + ymax) / (2 * ymax)) * (H - padT - padB);
+    ctx.font = `${10.5 * dpr}px ${getComputedStyle(document.body).fontFamily}`;
+    ctx.fillStyle = colors.muted; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+    const ticks = swing ? [-180, -90, 0, 90, 180] : [-30, -20, -10, 0, 10, 20, 30];
+    for (const v of ticks) {
+      ctx.strokeStyle = colors.line; ctx.lineWidth = 1 * dpr; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(padL, y(v)); ctx.lineTo(W - padR, y(v)); ctx.stroke();
+      ctx.fillText(v + "°", padL - 6 * dpr, y(v));
+    }
+    ctx.strokeStyle = colors.bad; ctx.lineWidth = 1.3 * dpr; ctx.setLineDash([5 * dpr, 4 * dpr]);
+    for (const v of [-20, 20]) { ctx.beginPath(); ctx.moveTo(padL, y(v)); ctx.lineTo(W - padR, y(v)); ctx.stroke(); }
+    ctx.setLineDash([]);
+    ctx.textAlign = "center"; ctx.textBaseline = "top"; ctx.fillStyle = colors.muted;
+    for (let k = 0; k <= 10; k += 2) {
+      ctx.textAlign = k === 10 ? "right" : "center";
+      ctx.fillText(k === 10 ? "bây giờ" : `−${10 - k}s`, k === 10 ? W - padR : x(S.t - 10 + k), H - padB + 5 * dpr);
+    }
+    ctx.save();
+    ctx.beginPath(); ctx.rect(padL, padT, W - padL - padR, H - padT - padB); ctx.clip();
+    ctx.strokeStyle = colors.pend; ctx.lineWidth = 2 * dpr; ctx.beginPath();
+    let prev = null;
+    for (const [tt, v] of S.trace) {
+      const vv = clamp(v, -ymax * 1.05, ymax * 1.05);
+      if (prev !== null && Math.abs(v - prev) > 180) ctx.moveTo(x(tt), y(vv)); else if (prev === null) ctx.moveTo(x(tt), y(vv)); else ctx.lineTo(x(tt), y(vv));
+      prev = v;
+    }
+    ctx.stroke();
+    if (S.trace.length) {
+      const [tt, v] = S.trace[S.trace.length - 1];
+      ctx.beginPath(); ctx.arc(x(tt), y(clamp(v, -ymax, ymax)), 3.5 * dpr, 0, 2 * Math.PI); ctx.fillStyle = colors.pend; ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // ---------------------------------------------------------------- text panels
+  const side = (v) => (v > 0 ? "phải" : "trái");
+  function pct(x) { return Math.round(clamp(x / ACC_MAX, -9.99, 9.99) * 100); }
+  function setBar(id, frac) {
+    const f = clamp(frac, -1, 1), el = $(id);
+    el.style.width = Math.abs(f) * 50 + "%";
+    el.style.left = f >= 0 ? "50%" : 50 - Math.abs(f) * 50 + "%";
+  }
+  function setEnergyBar(id, frac) { $(id).style.width = clamp(frac / 1.15, 0, 1) * 100 + "%"; }
+
+  function updateText() {
+    const phDeg = wrap(S.ph) / DEG;
+    const shown = S.mode === "swing" ? phDeg : clamp(phDeg, -99, 99);
+    $("hudTilt").textContent = (shown >= 0 ? "+" : "−") + Math.abs(shown).toFixed(1) + "°";
+
+    const st = $("hudState");
+    let stCls = "good", stTxt = "Đang giữ";
+    if (S.mode !== "swing") {
+      if (S.fallen) { stCls = "bad"; stTxt = "Đổ rồi"; }
+      $("hudTimer").textContent = `Giữ được ${fmt(S.held)} s`;
+    } else {
+      const map = { idle: ["warn", "Đang thõng xuống"], pump: ["warn", "Đang bơm năng lượng"], balance: ["good", "Đang giữ trên đỉnh"] };
+      [stCls, stTxt] = map[S.swState];
+      if (S.keyDir !== 0 && S.swState !== "balance") { stCls = "warn"; stTxt = "Em đang bơm"; }
+      $("hudTimer").textContent = `t = ${fmt(S.t)} s`;
+    }
+    st.className = "pill " + stCls; st.textContent = stTxt;
+
+    // loop strip
+    const encDeg = S.phiEst / DEG, rateDeg = S.rateEst / DEG;
+    $("lpSense").textContent = `lệch ${fmt(encDeg)}° · đang quay ${fmt(rateDeg, 0)}°/s`;
+    $("lpMotor").textContent = S.motor ? `đẩy ${pct(S.alpha)}% sức, sang ${side(S.alpha || 1)}` : "đã tắt";
+    $("lpPlant").textContent = `cánh tay ở ${fmt(((S.th / DEG) % 360 + 360) % 360, 0)}°`;
+    if (S.mode === "manual") {
+      $("lpBrainT").textContent = "Em là bộ não";
+      $("lpBrain").textContent = S.keyDir ? `em bấm ${side(S.keyDir)}` : "chưa bấm";
+    } else if (S.mode === "pd") {
+      $("lpBrainT").textContent = "Vi điều khiển tính";
+      $("lpBrain").textContent = `P×lệch + I×cộng dồn + D×tốc độ = ${pct(S.pPart + S.iPart + S.dPart)}%`;
+    } else {
+      $("lpBrainT").textContent = "Vi điều khiển tính";
+      $("lpBrain").textContent = S.swState === "balance" ? "giữ thăng bằng" : S.swState === "pump" ? "bơm theo nhịp" : "chờ lệnh";
+    }
+
+    // explanation
+    let ex;
+    if (S.mode === "manual") {
+      ex = S.fallen
+        ? `Con lắc đổ sau ${fmt(S.held)} giây. Rất khó vì con lắc đổ chỉ trong khoảng 0.2 giây, mắt và tay người không kịp. Bấm <b>Dựng lại</b>, chọn tốc độ 0.25× rồi thử lại.`
+        : `Con lắc đang nghiêng <b>${fmt(Math.abs(phDeg))}°</b> về bên <b>${side(phDeg)}</b>. Đẩy cánh tay về bên ${side(phDeg)} để chân con lắc chạy theo đỡ lấy nó.`;
+    } else if (S.mode === "pd") {
+      if (S.fallen) {
+        ex = `Con lắc đổ sau ${fmt(S.held)} giây với P = ${S.P}, I = ${S.I}, D = ${S.D}. ${hintFor(S.P, S.I, S.D).msg} Nhập số mới rồi bấm <b>Áp dụng PID</b> để thử lại.`;
+      } else {
+        if (Math.abs(encDeg) < 0.5 && Math.abs(rateDeg) < 15) {
+          ex = "Con lắc gần như đứng thẳng. Bộ PID chỉ cần đẩy rất nhẹ để giữ nó yên. Bấm <b>Đẩy nhẹ</b> để xem robot phản ứng.";
+        } else {
+          const toward = S.phiEst * S.rateEst > 0 ? "đổ thêm" : "quay về giữa";
+          ex = `Con lắc lệch <b>${fmt(Math.abs(encDeg))}°</b> về bên ${side(encDeg || 1)} và đang <b>${toward}</b> (${fmt(Math.abs(rateDeg), 0)}°/s). ` +
+               `P góp ${pct(S.pPart)}%, ` + (S.I ? `I góp ${pct(S.iPart)}%, ` : "") + `D góp ${pct(S.dPart)}%, nên motor đẩy cánh tay sang <b>${side(S.u || 1)}</b> để đỡ.`;
+        }
+      }
+    } else {
+      const Wt = M * G * LC * (1 + Math.cos(S.ph)), Wd = 0.5 * J * S.phd * S.phd;
+      const W = Wt + Wd;
+      if (S.swState === "balance") ex = `Con lắc đã lên đỉnh. Cơ năng ≈ ${fmt(W * 1000, 0)} mJ, đúng bằng thế năng ở đỉnh (${fmt(E_TOP * 1000, 0)} mJ). Robot chuyển sang giữ thăng bằng như ở Bước 2.`;
+      else ex = `Cơ năng W = W<sub>t</sub> + W<sub>đ</sub> ≈ <b>${fmt(W * 1000, 0)} mJ</b>. Cần ${fmt(E_TOP * 1000, 0)} mJ mới lên tới đỉnh. ` +
+                (S.swState === "pump" ? "Mỗi lần đẩy đúng nhịp, cơ năng tăng thêm một chút." : "Bấm <b>Robot tự làm</b>, hoặc tự đẩy đúng nhịp.");
+      setEnergyBar("eWt", Wt / E_TOP); setEnergyBar("eWd", Wd / E_TOP); setEnergyBar("eW", W / E_TOP);
+      $("eWtv").textContent = fmt(Wt * 1000, 0); $("eWdv").textContent = fmt(Wd * 1000, 0); $("eWv").textContent = fmt(W * 1000, 0);
+    }
+    if (lastNote && S.t - lastNoteT < 2.5) ex = `<b>${lastNote}</b> ` + ex;
+    $("explain").innerHTML = ex;
+
+    if (S.mode === "pd") {
+      setBar("barP", S.motor ? S.pPart / ACC_MAX : 0); $("barPv").textContent = (S.motor ? pct(S.pPart) : 0) + "%";
+      setBar("barI", S.motor ? S.iPart / ACC_MAX : 0); $("barIv").textContent = (S.motor ? pct(S.iPart) : 0) + "%";
+      setBar("barD", S.motor ? S.dPart / ACC_MAX : 0); $("barDv").textContent = (S.motor ? pct(S.dPart) : 0) + "%";
+      setBar("barU", S.motor ? S.alpha / ACC_MAX : 0); $("barUv").textContent = (S.motor ? pct(S.alpha) : 0) + "%";
+    }
+  }
+
+  // ---------------------------------------------------------------- UI wiring
+  function setMode(m) {
+    S.mode = m;
+    for (const b of document.querySelectorAll(".step")) b.setAttribute("aria-selected", String(b.dataset.mode === m));
+    for (const id of ["manual", "pd", "swing"]) $("panel-" + id).hidden = id !== m;
+    S.keyDir = 0; S.trace = []; S.nextTrace = S.t; lastNote = "";
+    for (const b of document.querySelectorAll(".hold")) b.classList.remove("on");
+    if (m === "manual") { standUp((Math.random() < 0.5 ? -1 : 1) * 1); }
+    if (m === "pd") { standUp(3); }
+    if (m === "swing") { hangDown(); }
+    $("loopFoot").hidden = false;
+    try { localStorage.setItem("conlacnguoc.mode", m); } catch (e) {}
+  }
+  for (const b of document.querySelectorAll(".step")) b.addEventListener("click", () => setMode(b.dataset.mode));
+
+  for (const b of $("speedSeg").querySelectorAll("button")) b.addEventListener("click", () => {
+    S.speed = parseFloat(b.dataset.speed);
+    for (const o of $("speedSeg").querySelectorAll("button")) o.setAttribute("aria-pressed", String(o === b));
+  });
+  for (const b of $("camSeg").querySelectorAll("button")) b.addEventListener("click", () => {
+    S.follow = b.dataset.cam === "follow";
+    for (const o of $("camSeg").querySelectorAll("button")) o.setAttribute("aria-pressed", String(o === b));
+  });
+  $("pauseBtn").addEventListener("click", () => {
+    S.paused = !S.paused;
+    $("pauseBtn").setAttribute("aria-pressed", String(S.paused));
+    $("pauseBtn").textContent = S.paused ? "Chạy tiếp" : "Tạm dừng";
+  });
+
+  function holdButton(el, dir) {
+    const on = (e) => { e.preventDefault(); S.keyDir = dir; el.classList.add("on"); try { el.setPointerCapture(e.pointerId); } catch (_) {} };
+    const off = () => { if (S.keyDir === dir) S.keyDir = 0; el.classList.remove("on"); };
+    el.addEventListener("pointerdown", on);
+    for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) el.addEventListener(ev, off);
+    el.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
+  holdButton($("mLeft"), -1); holdButton($("mRight"), 1);
+  holdButton($("sLeft"), -1); holdButton($("sRight"), 1);
+
+  const keys = new Set();
+  function keyDirFromSet() { return (keys.has("R") ? 1 : 0) - (keys.has("L") ? 1 : 0); }
+  window.addEventListener("keydown", (e) => {
+    if (e.target && e.target.tagName === "INPUT") return;
+    if (S.mode === "pd") return;
+    const k = e.key === "ArrowLeft" || e.key === "a" || e.key === "A" ? "L" : e.key === "ArrowRight" || e.key === "d" || e.key === "D" ? "R" : null;
+    if (!k) return;
+    e.preventDefault(); keys.add(k); S.keyDir = keyDirFromSet();
+  });
+  window.addEventListener("keyup", (e) => {
+    const k = e.key === "ArrowLeft" || e.key === "a" || e.key === "A" ? "L" : e.key === "ArrowRight" || e.key === "d" || e.key === "D" ? "R" : null;
+    if (!k) return;
+    keys.delete(k); S.keyDir = keyDirFromSet();
+  });
+  window.addEventListener("blur", () => { keys.clear(); S.keyDir = 0; });
+
+  $("mReset").addEventListener("click", () => standUp((Math.random() < 0.5 ? -1 : 1) * 1));
+  $("pdReset").addEventListener("click", () => standUp(Math.random() < 0.5 ? -3 : 3));
+  $("pushL").addEventListener("click", () => push(-1));
+  $("pushR").addEventListener("click", () => push(1));
+
+  function bindRange(id, key, label, after) {
+    const el = $(id), out = $(id + "v");
+    const upd = () => { S[key] = parseFloat(el.value); out.textContent = label(S[key]); updateHint(); if (after) after(); };
+    el.addEventListener("input", upd); upd();
+  }
+  bindRange("kDelay", "delayMs", (v) => v + " ms");
+
+  // PID number entry: type, see the prediction, then apply (button or Enter)
+  function readInputs() {
+    const out = { ok: true, bad: [] };
+    for (const k of ["P", "I", "D"]) {
+      const el = $("in" + k), raw = el.value.trim().replace(",", ".");
+      const v = Number(raw);
+      const [lo, hi] = LIMITS[k];
+      const good = raw !== "" && Number.isFinite(v) && v >= lo && v <= hi;
+      el.classList.toggle("invalid", !good);
+      el.classList.toggle("changed", good && v !== S[k]);
+      if (!good) { out.ok = false; out.bad.push(`${k} phải là số từ ${lo} đến ${hi}`); }
+      out[k] = v;
+    }
+    return out;
+  }
+  function showActive() {
+    const v = readInputs();
+    const pending = v.ok && (v.P !== S.P || v.I !== S.I || v.D !== S.D);
+    const el = $("pidActive");
+    el.innerHTML = `Robot đang dùng: P = <b>${S.P}</b> · I = <b>${S.I}</b> · D = <b>${S.D}</b>` + (pending ? " · số mới chưa áp dụng" : "");
+    el.classList.toggle("pending", pending);
+    const err = $("pidErr");
+    err.hidden = v.ok;
+    if (!v.ok) err.textContent = v.bad.join(". ") + ".";
+  }
+  function applyPid() {
+    const v = readInputs();
+    if (!v.ok) { showActive(); return; }
+    const changed = v.P !== S.P || v.I !== S.I || v.D !== S.D;
+    S.P = v.P; S.I = v.I; S.D = v.D; S.iSum = 0;
+    S.streakMaxP = Math.max(S.streakMaxP, S.P);
+    if (changed) note(`Đã áp dụng P = ${S.P}, I = ${S.I}, D = ${S.D}.`);
+    if (S.fallen) standUp(Math.random() < 0.5 ? -3 : 3);
+    readInputs(); showActive(); updateHint();
+  }
+  $("pidForm").addEventListener("submit", (e) => { e.preventDefault(); applyPid(); });
+  for (const k of ["P", "I", "D"]) $("in" + k).addEventListener("input", () => { showActive(); updateHint(); });
+  for (const chip of document.querySelectorAll(".chip")) chip.addEventListener("click", () => {
+    $("inP").value = chip.dataset.p; $("inI").value = chip.dataset.i; $("inD").value = chip.dataset.d;
+    showActive(); updateHint(); $("pidApply").focus();
+  });
+  showActive(); updateHint();
+  $("assist").addEventListener("change", (e) => { S.assist = e.target.checked; updateHint(); });
+  $("kDelay").addEventListener("input", updateHint);
+
+  $("swAuto").addEventListener("click", () => {
+    S.autoSwing = !S.autoSwing;
+    $("swAuto").setAttribute("aria-pressed", String(S.autoSwing));
+    $("swAuto").textContent = S.autoSwing ? "Robot đang tự làm" : "Robot tự làm";
+    if (S.autoSwing && S.swState !== "balance") { S.swState = "pump"; S.pumpRef = S.th; }
+    if (!S.autoSwing && S.swState === "pump") S.swState = "idle";
+  });
+  $("swReset").addEventListener("click", () => hangDown());
+  $("autoCatch").addEventListener("change", (e) => { S.autoCatch = e.target.checked; if (!S.autoCatch && S.swState === "balance") S.swState = "idle"; });
+  $("goalsReset").addEventListener("click", () => {
+    done = {}; try { localStorage.removeItem("conlacnguoc.goals"); } catch (e) {}
+    renderGoals();
+  });
+
+  // theme changes
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  (mq.addEventListener ? mq.addEventListener.bind(mq) : mq.addListener.bind(mq))("change", readColors);
+  new MutationObserver(readColors).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  // ---------------------------------------------------------------- go
+  readColors();
+  renderGoals();
+  let startMode = "pd";
+  try { const m = localStorage.getItem("conlacnguoc.mode"); if (m === "manual" || m === "pd" || m === "swing") startMode = m; } catch (e) {}
+  setMode(startMode);
+  // let the robot settle so the first frame already shows it balancing
+  advance(0.05); for (let i = 0; i < 20; i++) advance(0.05);
+  drawRig(); drawTrace(); updateText();
+
+  let last = performance.now(), textT = 0;
+  function frame(now) {
+    const dt = (now - last) / 1000; last = now;
+    advance(dt);
+    if (Math.abs(S.flash) > 0) S.flash = Math.sign(S.flash) * Math.max(0, Math.abs(S.flash) - dt);
+    drawRig(); drawTrace();
+    textT += dt;
+    if (textT > 0.08) { updateText(); checkGoals(); textT = 0; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
