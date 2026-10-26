@@ -30,6 +30,20 @@ Each student can work on their own device. Finished challenges are remembered in
 
 A good starting set: **P = 150, I = 0, D = 20**. There are 4 ready-made sets to compare (*Good set, No D, Small P, Big I*). Before you press Apply, the page **predicts** whether the new numbers will hold the stick, so students can check their own guesses.
 
+### The closed loop
+
+A simple diagram shows the loop the robot runs 500 times a second:
+
+```
+ Goal ──► Compare ──► Brain (PID) ──► Motor ──► Stick
+ (0°)       ▲                                     │
+            └────────────── Sensor ◄──────────────┘
+```
+
+Every box shows live numbers (how far off, how hard the motor pushes, what the sensor reads), and moving dots show information travelling round the loop.
+
+**Experiment: ✂ Cut the sensor wire.** The robot goes blind: it thinks the stick is straight, does nothing, and the stick falls. The loop is now **open**. Press *Reconnect the wire* to close it again. This is the quickest way to see why feedback matters.
+
 ### Is it balanced? (Lyapunov check)
 
 Instead of judging "it looks upright" by eye, the page uses **Lyapunov's method**. It gives the robot a score **V**, a kind of "energy of the mistake":
@@ -49,28 +63,30 @@ Around the upright position the closed loop is linear: **ẋ = A·x** with x = [
 With I > 0 the quantity h = φ' + c·θ' + b·φ − a·∫φ never changes, so ∫φ is folded into the other states and the arm settles at a new spot θ* = I·h / (a·k3). V is measured from that spot, which is why the page can say "stick upright, arm still drifting". The 10% threshold leaves room for the encoder's 0.36° steps, which make very large P or D shake slightly.
 </details>
 
-### 7 challenges
+### 8 challenges
 
 1. Keep the stick up yourself for 3 seconds.
 2. Find numbers that let the robot balance for 10 seconds.
 3. Push the stick 3 times and the robot still holds it.
 4. Try D = 0 and see what the stick does.
-5. Try I = 400, then press Push: does the arm wander far or stay close?
-6. Watch the robot swing the stick up to the top.
-7. Swing the stick up to the top yourself.
+5. Cut the sensor wire. What happens to the stick?
+6. Try I = 400, then press Push: does the arm wander far or stay close?
+7. Watch the robot swing the stick up to the top.
+8. Swing the stick up to the top yourself.
 
 ## Notes for teachers
 
 The lesson fits into **4 periods**:
 
 1. **Why is it hard?** Have the class balance a ruler or a broom on their hands, then do Step 1. Links to *types of equilibrium* and *moment of a force*.
-2. **The feedback loop.** Go through Look → Think → Push at the bottom of the page. Game idea: one student balances a broom blindfolded while a partner calls out directions, to show how delay ruins balance.
+2. **The closed loop.** Walk through the loop diagram box by box, then press **✂ Cut the sensor wire** and let the class predict what happens. Game idea: one student balances a broom blindfolded while a partner calls out directions, to show how slow or missing feedback ruins balance.
 3. **Tuning PID.** Students do Step 2 in groups: P only, then add D, then try I. They record results on a worksheet, and groups compete to finish the most challenges.
 4. **Energy.** Do Step 3. Links to *potential energy, kinetic energy and conservation of mechanical energy*.
 
 Quick check questions (no formulas needed):
 - Why does the stick keep wobbling when only P is used?
-- Draw the 3-step feedback loop.
+- Draw the closed loop: Goal → Compare → Brain → Motor → Stick → Sensor → back to Compare.
+- What changes when the sensor wire is cut, and why does the stick fall?
 - Why does the robot need to push back and forth many times to bring the stick to the top?
 
 ## What is the simulation based on?
