@@ -140,15 +140,34 @@ button { font: inherit; }
 #vVal { text-align: right; font-size: 18px; }
 #vtrace { width: 100%; height: 140px; display: block; }
 .say.small { font-size: 13.5px; }
+.loop-wrap { overflow-x: auto; }
+svg.loop { display: block; width: 100%; max-width: 860px; min-width: 600px; height: auto; margin: 0 auto; font-family: var(--font); }
+svg.loop .wire { fill: none; stroke: var(--soft); stroke-width: 2.5; }
+svg.loop .wire.cut { stroke: var(--red); stroke-dasharray: 8 7; }
+svg.loop .arrow-head { fill: var(--soft); }
+svg.loop .flow { fill: none; stroke: var(--blue); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 0.1 26; animation: flow 1.2s linear infinite; }
+svg.loop .flow.off { display: none; }
+@keyframes flow { to { stroke-dashoffset: -26.1; } }
+svg.loop .box rect, svg.loop .box circle { fill: var(--card); stroke-width: 2.5; }
+svg.loop .goal rect { stroke: var(--soft); }
+svg.loop .cmp circle { stroke: var(--ink); }
+svg.loop .brain rect { stroke: var(--blue); }
+svg.loop .motor rect { stroke: var(--purple); }
+svg.loop .stick rect { stroke: var(--orange); }
+svg.loop .sensor rect { stroke: var(--green); }
+svg.loop .t { font-family: var(--font-head); font-weight: 700; font-size: 17px; fill: var(--ink); }
+svg.loop .small-t { font-size: 12px; }
+svg.loop .v { font-size: 14px; fill: var(--soft); }
+svg.loop .lbl { font-size: 13px; fill: var(--soft); font-style: italic; }
+svg.loop .sign { font-size: 20px; font-weight: 700; fill: var(--ink); }
+svg.loop .cut-bg { fill: var(--card); stroke: var(--red); stroke-width: 2; }
+svg.loop .cut-text { fill: var(--red); font-weight: 700; font-size: 15px; }
+#cutBtn[aria-pressed="true"] { background: var(--red); border-color: var(--red); color: #fff; }
+@media (prefers-reduced-motion: reduce) { svg.loop .flow { animation: none; } }
 .below { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 860px) { .below { grid-template-columns: minmax(0, 1fr); } }
 #explain { font-size: 17px; }
 #trace { width: 100%; height: 150px; display: block; }
-.how { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-@media (max-width: 520px) { .how { grid-template-columns: minmax(0, 1fr); } }
-.how div { background: var(--tint); border-radius: 14px; padding: 12px; display: grid; gap: 2px; }
-.how b { font-family: var(--font-head); font-size: 18px; }
-.how span { color: var(--soft); font-size: 14px; }
 .goals { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .goals li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; }
 .goals .tick { flex: none; width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--line); display: grid; place-items: center; color: #fff; font-size: 14px; font-weight: 700; }
@@ -268,6 +287,70 @@ button { font: inherit; }
 
   <div class="card">
     <div class="lyap-head">
+      <h2>The closed loop: how the robot balances</h2>
+      <button type="button" class="btn small" id="cutBtn" aria-pressed="false">✂ Cut the sensor wire</button>
+    </div>
+    <p class="say">The robot never stops checking. It goes round this loop <b>500 times every second</b>.</p>
+    <div class="loop-wrap">
+      <svg class="loop" viewBox="0 0 820 290" role="img" aria-label="Closed loop: goal, compare, brain, motor, stick, sensor, back to compare">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4.5" markerHeight="4.5" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" class="arrow-head"></path>
+          </marker>
+        </defs>
+        <!-- wires -->
+        <path class="wire" d="M130,75 H162" marker-end="url(#arrow)"></path>
+        <path class="wire" d="M238,75 H266" marker-end="url(#arrow)"></path>
+        <path class="wire" d="M420,75 H466" marker-end="url(#arrow)"></path>
+        <path class="wire" d="M600,75 H646" marker-end="url(#arrow)"></path>
+        <path class="wire" d="M725,110 V235 H624" marker-end="url(#arrow)"></path>
+        <path class="wire" id="fbWire" d="M470,235 H200 V117" marker-end="url(#arrow)"></path>
+        <!-- moving dots: information travelling round the loop -->
+        <path class="flow" d="M234,75 H262 M420,75 H462 M600,75 H642 M725,110 V235 H628"></path>
+        <path class="flow" id="fbFlow" d="M470,235 H200 V117"></path>
+        <!-- wire labels -->
+        <text class="lbl" x="252" y="104" text-anchor="middle">error</text>
+        <text class="lbl" x="443" y="62" text-anchor="middle">push</text>
+        <text class="lbl" x="623" y="62" text-anchor="middle">move</text>
+        <text class="lbl" x="735" y="175">lean</text>
+        <text class="lbl" x="280" y="225" text-anchor="middle">measured lean</text>
+        <g id="cutMark" visibility="hidden">
+          <rect x="370" y="221" width="70" height="28" rx="6" class="cut-bg"></rect>
+          <text x="405" y="241" text-anchor="middle" class="cut-text">✂ cut</text>
+        </g>
+        <!-- goal -->
+        <g class="box goal"><rect x="10" y="40" width="120" height="70" rx="12"></rect>
+          <text x="70" y="66" class="t" text-anchor="middle">Goal</text>
+          <text x="70" y="92" class="v" text-anchor="middle">stand at 0°</text></g>
+        <!-- compare -->
+        <g class="box cmp"><circle cx="200" cy="75" r="38"></circle>
+          <text x="200" y="71" class="t small-t" text-anchor="middle">Compare</text>
+          <text x="200" y="91" class="v" id="dErr" text-anchor="middle">off 0°</text>
+          <text x="152" y="60" class="sign" text-anchor="middle">+</text>
+          <text x="218" y="132" class="sign" text-anchor="middle">−</text></g>
+        <!-- brain -->
+        <g class="box brain"><rect x="270" y="40" width="150" height="70" rx="12"></rect>
+          <text x="345" y="66" class="t" id="dBrainT" text-anchor="middle">Brain (PID)</text>
+          <text x="345" y="92" class="v" id="dBrain" text-anchor="middle">push 0%</text></g>
+        <!-- motor -->
+        <g class="box motor"><rect x="470" y="40" width="130" height="70" rx="12"></rect>
+          <text x="535" y="66" class="t" text-anchor="middle">Motor</text>
+          <text x="535" y="92" class="v" id="dMotor" text-anchor="middle">turns the arm</text></g>
+        <!-- stick -->
+        <g class="box stick"><rect x="650" y="40" width="150" height="70" rx="12"></rect>
+          <text x="725" y="66" class="t" text-anchor="middle">Stick</text>
+          <text x="725" y="92" class="v" id="dStick" text-anchor="middle">leans 0°</text></g>
+        <!-- sensor -->
+        <g class="box sensor"><rect x="470" y="200" width="150" height="70" rx="12"></rect>
+          <text x="545" y="226" class="t" text-anchor="middle">Sensor</text>
+          <text x="545" y="252" class="v" id="dSensor" text-anchor="middle">reads 0°</text></g>
+      </svg>
+    </div>
+    <p class="say" id="loopNote"><b>Closed loop</b> means the robot uses what it <b>measures</b> to decide what to do <b>next</b>. Try cutting the sensor wire: the loop becomes <b>open</b> and the robot is blind.</p>
+  </div>
+
+  <div class="card">
+    <div class="lyap-head">
       <h2>Is it balanced? <small>(Lyapunov check)</small></h2>
       <span class="verdict good" id="verdict">Balanced ✓</span>
     </div>
@@ -292,15 +375,6 @@ button { font: inherit; }
     </div>
   </div>
 
-  <div class="card">
-    <h2>How does the robot keep its balance?</h2>
-    <div class="how">
-      <div><b>1. Look</b><span>A sensor measures how far the stick is leaning.</span></div>
-      <div><b>2. Think</b><span>A tiny computer uses P, I and D to work out how hard to push.</span></div>
-      <div><b>3. Push</b><span>The motor turns the arm to catch the stick. Then it looks again…</span></div>
-    </div>
-    <p class="say">The robot repeats these 3 steps 500 times every second. This is called a <b>feedback loop</b>.</p>
-  </div>
 </div>
 
 <script>
@@ -325,7 +399,7 @@ button { font: inherit; }
     swState: "idle", autoSwing: false, autoCatch: true, pumpRef: 0, manualPump: false,
     held: 0, best: 0, pushes: 0, lastPushT: -10,
     speed: 1, paused: false, trace: [], nextTrace: 0, follow: false,
-    vtrace: [], nextV: 0, lowSince: null, calmSince: null,
+    vtrace: [], nextV: 0, lowSince: null, calmSince: null, cut: false,
   };
   const FIXED_VIEW = 0.65;   // camera azimuth (rad) when the view stays still
   const camPsi = () => (S.follow ? S.th + 0.42 : FIXED_VIEW);
@@ -352,6 +426,10 @@ button { font: inherit; }
     if (S.mode === "pd") {
       S.vmax = 40;
       if (!S.motor) { S.u = 0; return; }
+      if (S.cut) {   // open loop: no signal reaches the brain, so it thinks the stick is straight
+        S.u = ASSIST[0] * (S.th - S.thRef) + ASSIST[1] * S.thd;
+        return;
+      }
       S.iSum = clamp(S.iSum + phi * CTRL_DT, -0.5, 0.5);
       // student PID + a small hidden helper that keeps the arm from wandering off
       S.u = S.P * phi + S.I * S.iSum + S.D * rate + ASSIST[0] * (S.th - S.thRef) + ASSIST[1] * S.thd;
@@ -560,6 +638,7 @@ button { font: inherit; }
   function verdict() {
     if (S.mode === "manual") return ["muted", "You are the controller", "In Step 1 there is no formula inside the robot, so there is no V to check. Go to Step 2 to see it."];
     const L = lyapNow();
+    if (S.mode === "pd" && S.cut) return ["bad", "Open loop: robot is blind", "The sensor wire is cut, so nothing comes back to the brain. Lyapunov's check is about the <b>closed</b> loop, and without feedback there is no loop to check."];
     if (S.mode === "pd" && !L.ok) return ["bad", "Can't balance", "✗ For these P, I, D numbers <b>no Lyapunov function exists</b>, so the robot cannot hold the stick for long."];
     const exists = "✓ For these numbers a V that always goes down <b>exists</b>, so the robot can balance.";
     if (S.mode === "pd" && S.fallen) return ["bad", "Fell over", "V shot up when the stick fell. " + exists];
@@ -621,6 +700,7 @@ button { font: inherit; }
     { id: "pd10", text: "Step 2: find numbers that let the robot balance for 10 seconds." },
     { id: "push3", text: "Step 2: push the stick 3 times and the robot still holds it." },
     { id: "noD", text: "Step 2: try D = 0. What does the stick do?" },
+    { id: "cut", text: "Step 2: cut the sensor wire. What happens to the stick?" },
     { id: "bigI", text: "Step 2: try I = 400, then press Push. Does the arm wander far or stay close?" },
     { id: "swingAuto", text: "Step 3: watch the robot swing the stick up to the top." },
     { id: "swingManual", text: "Step 3: swing the stick up to the top yourself." },
@@ -643,6 +723,7 @@ button { font: inherit; }
     if (!S.fallen && S.held >= 10) completeGoal("pd10");
     if (!S.fallen && S.pushes >= 3 && S.t - S.lastPushT > 1.5) completeGoal("push3");
     if (S.D === 0 && S.held > 0.8) completeGoal("noD");
+    if (S.cut && S.fallen) completeGoal("cut");
     if (S.I >= 400 && S.pushes >= 1 && S.held > 3) completeGoal("bigI");
   }
 
@@ -834,6 +915,10 @@ button { font: inherit; }
       ex = S.fallen
         ? `It fell after ${S.held.toFixed(1)} s. Hard, isn't it? Press <b>Stand it up again</b> and try <b>Slow motion</b>.`
         : `The stick is leaning <b>${dir(deg)}</b>. Push the arm ${dir(deg)} to catch it.`;
+    } else if (S.mode === "pd" && S.cut) {
+      ex = S.fallen
+        ? "Without feedback the robot was blind, so the stick fell. Press <b>Reconnect</b>, then <b>Stand it up</b>."
+        : "The sensor wire is cut. The robot thinks the stick is straight, so it does nothing… and the stick starts to fall. This is an <b>open loop</b>.";
     } else if (S.mode === "pd") {
       if (S.fallen) ex = `It fell after ${S.held.toFixed(1)} s. ${hintFor(S.P, S.I, S.D).msg} Change the numbers and press <b>Apply</b>.`;
       else if (Math.abs(deg) < 0.6 && Math.abs(S.rateEst) < 0.3) ex = "The stick is standing still. Press <b>Push</b> to test the robot.";
@@ -861,11 +946,38 @@ button { font: inherit; }
     for (const b of document.querySelectorAll(".tab")) b.setAttribute("aria-selected", String(b.dataset.mode === m));
     for (const id of ["manual", "pd", "swing"]) $("panel-" + id).hidden = id !== m;
     S.keyDir = 0; S.trace = []; S.nextTrace = S.t; noteText = "";
+    setCut(false);
+    $("cutBtn").disabled = m !== "pd";
+    $("cutBtn").title = m === "pd" ? "" : "Available in Step 2";
     for (const b of document.querySelectorAll(".hold")) b.classList.remove("on");
     setFollow(m === "manual");   // step 1: camera follows the arm so ◀ ▶ match the screen
     if (m === "manual") standUp(Math.random() < 0.5 ? -1 : 1);
     if (m === "pd") standUp(3);
     if (m === "swing") hangDown();
+  }
+  function setCut(on) {
+    S.cut = on;
+    $("cutBtn").setAttribute("aria-pressed", String(on));
+    $("cutBtn").textContent = on ? "Reconnect the wire" : "✂ Cut the sensor wire";
+    $("fbWire").classList.toggle("cut", on);
+    $("fbFlow").classList.toggle("off", on);
+    $("cutMark").setAttribute("visibility", on ? "visible" : "hidden");
+    if (on) note("Sensor wire cut!"); else S.lowSince = null;
+  }
+  $("cutBtn").addEventListener("click", () => setCut(!S.cut));
+  function updateLoop() {
+    const deg = wrap(S.ph) / DEG;
+    const seen = S.cut ? 0 : S.phiEst / DEG;
+    const r1 = (x) => (Math.abs(x) < 0.05 ? "0" : Math.abs(x).toFixed(1));
+    const hanging = S.mode === "swing" && Math.abs(deg) > 90;
+    $("dStick").textContent = hanging ? "hanging down" : S.fallen ? "fell over" : `leans ${r1(deg)}°`;
+    $("dSensor").textContent = S.cut ? "no signal" : hanging ? `reads ${Math.round(Math.abs(seen))}°` : `reads ${r1(seen)}°`;
+    $("dErr").textContent = S.cut ? "sees 0°" : hanging ? "far off" : `off ${r1(seen)}°`;
+    const power = S.motor ? Math.round(Math.abs(S.alpha) / ACC_MAX * 100) : 0;
+    $("dMotor").textContent = power ? `${power}% power` : "resting";
+    if (S.mode === "manual") { $("dBrainT").textContent = "Brain (you)"; $("dBrain").textContent = S.keyDir ? "you push" : "waiting"; }
+    else if (S.mode === "swing") { $("dBrainT").textContent = "Brain (robot)"; $("dBrain").textContent = S.swState === "balance" ? "balancing" : S.swState === "pump" ? "pumping" : "waiting"; }
+    else { $("dBrainT").textContent = "Brain (PID)"; $("dBrain").textContent = S.cut ? "does nothing" : `push ${power}%`; }
   }
   function setFollow(on) {
     S.follow = on;
@@ -923,13 +1035,13 @@ button { font: inherit; }
   // ------------------------------------------------------------ start
   readColors(); renderGoals(); refreshPid(); setMode("pd");
   for (let i = 0; i < 20; i++) advance(0.05);
-  drawRig(); drawTrace(); drawV(); updateText();
+  drawRig(); drawTrace(); drawV(); updateText(); updateLoop();
   let last = performance.now(), textT = 0;
   function frame(now) {
     const dt = (now - last) / 1000; last = now;
     advance(dt); drawRig(); drawTrace(); drawV();
     textT += dt;
-    if (textT > 0.1) { updateText(); checkGoals(); textT = 0; }
+    if (textT > 0.1) { updateText(); updateLoop(); checkGoals(); textT = 0; }
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
